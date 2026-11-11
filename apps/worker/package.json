@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "types": "wrangler types",
+    "types": "wrangler types --strict-vars=false",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@spotiforge/shared": "workspace:*"
+    "@spotiforge/shared": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

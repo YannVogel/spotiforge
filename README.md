@@ -10,6 +10,28 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 Démarrage. Le monorepo est en place (`apps/mobile`, `apps/worker`, `packages/shared`), sans fonctionnalité pour l'instant. Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
 
+## Configuration
+
+Le repo est public : aucune valeur réelle n'y est versionnée. Après un clone, copier les deux modèles puis remplacer les valeurs factices :
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
+```
+
+| Où | Valeur | Rôle |
+|---|---|---|
+| `apps/mobile/.env` | `EXPO_PUBLIC_SPOTIFY_CLIENT_ID` | Identifiant client de l'app Spotify (dashboard développeur) |
+| `apps/mobile/.env` | `EXPO_PUBLIC_WORKER_URL` | URL du Worker de forge |
+| `apps/mobile/app.json` | `scheme` | Schéma de l'app (`spotiforge`), base de l'URI de redirection Spotify |
+| `apps/worker/.dev.vars` | `ANTHROPIC_API_KEY` | Secret : clé de l'API Anthropic |
+| `apps/worker/.dev.vars` | `ALLOWED_SPOTIFY_IDS` | Secret : comptes Spotify autorisés, séparés par des virgules |
+| `apps/worker/wrangler.jsonc` | `CLAUDE_MODEL` | Variable non secrète : modèle Claude utilisé |
+
+Les variables `EXPO_PUBLIC_*` sont intégrées au bundle de l'app : elles ne doivent contenir aucun secret. En production, les secrets du Worker se posent avec `pnpm --filter @spotiforge/worker exec wrangler secret put <NOM>`.
+
+Une valeur manquante ou invalide est signalée par son nom : l'app s'arrête au démarrage avec une `AppConfigError`, le Worker répond `500 misconfigured` et journalise le nom de la variable (jamais sa valeur).
+
 ## Où lire quoi
 
 | Fichier | Contenu |

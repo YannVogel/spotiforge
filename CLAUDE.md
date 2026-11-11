@@ -32,6 +32,8 @@ Prérequis : Node 22.12 ou plus, pnpm 11 (activé par `corepack enable`, version
 
 ```bash
 pnpm install                                # installe les trois paquets du monorepo
+cp apps/mobile/.env.example apps/mobile/.env              # configuration de l'app (voir README)
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars     # secrets locaux du Worker (voir README)
 pnpm mobile                                 # lance Metro (Expo) pour l'app
 pnpm worker                                 # lance le Worker en local (http://localhost:8787)
 pnpm lint                                   # ESLint puis Prettier en vérification, sur tout le repo
