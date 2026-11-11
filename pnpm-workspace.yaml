@@ -38,6 +38,8 @@ minimumReleaseAgeExclude:
 nodeLinker: hoisted
 
 # Binaires natifs requis par Wrangler (bundler et runtime local du Worker).
+# @parcel/watcher (Jest) est livré précompilé : son script de compilation est inutile.
 allowBuilds:
+  '@parcel/watcher': false
   esbuild: true
   workerd: true
