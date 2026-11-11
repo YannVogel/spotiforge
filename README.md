@@ -8,7 +8,7 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 ## État
 
-Démarrage. Aucun code applicatif pour l'instant : le repo contient le cadrage, le design et le backlog (issues, epics, milestones).
+Démarrage. Le monorepo est en place (`apps/mobile`, `apps/worker`, `packages/shared`), sans fonctionnalité pour l'instant. Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
 
 ## Où lire quoi
 

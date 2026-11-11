@@ -1,0 +1,18 @@
+{
+  "name": "@spotiforge/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@spotiforge/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "wrangler": "^4.160.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "spotiforge-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "send_metrics": false,
+  "observability": {
+    "enabled": true
+  }
+}
