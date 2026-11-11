@@ -17,8 +17,8 @@ Envoyée par l'app au Worker (`POST /forge`).
 | `discovery` | entier de 0 à 100 | Part de découvertes souhaitée |
 | `decades` | liste parmi `60s` … `20s` | Vide : toutes les époques |
 | `shape` | `rise` \| `fall` \| `wave` \| `free` | Progression : montée, descente, vague, libre |
-| `taste` | optionnel | Résumé des écoutes : artistes les plus écoutés, artistes récents. Présent seulement si « mes écoutes » est activé |
-| `keep` | liste, optionnelle | Titres trempés à conserver : `{ position, artist, title }` |
+| `taste` | optionnel | Résumé des écoutes : `{ topArtists, recentArtists, genres }` (artistes les plus écoutés, artistes récents, genres). Présent seulement si « mes écoutes » est activé |
+| `keep` | liste, optionnelle | Titres trempés à conserver : `{ position, artist, title }`, `position` étant l'index du titre dans la pièce, à partir de 0 |
 | `avoid` | liste, optionnelle | Titres à ne pas proposer : déjà refusés, ou déjà dans la pièce |
 | `locale` | texte | Langue du titre, de la description et des raisons (`fr` par défaut) |
 
@@ -41,6 +41,30 @@ Un candidat :
 | `reason` | une phrase courte | « Pourquoi ce titre », dans la langue de `locale` |
 | `slot` | nombre de 0 à 1 | Place dans la progression : 0 au début, 1 à la fin |
 | `familiar` | booléen | Le LLM pense que la personne connaît ce titre, d'après `taste` |
+
+## Schémas et bornes
+
+Les schémas Zod vivent dans `packages/shared/src/forge.ts` (`forgeRequestSchema`, `forgeResponseSchema`, `candidateSchema`, `forgeSettingsSchema`). Les fabriques de données de test sont exportées par `@spotiforge/shared/testing`.
+
+`ForgeSettings` regroupe les réglages de l'écran Création, gardés avec les pièces et les moules : `length`, `discovery`, `decades`, `shape`, et `useTaste` (« Alliage : mes écoutes »). La requête reprend ces réglages sans `useTaste` : c'est la présence de `taste` qui le traduit.
+
+| Champ | Borne |
+|---|---|
+| `prompt` | 1 à 500 caractères, espaces de début et de fin retirés |
+| `length` | 10 à 120 minutes, ou 3 à 30 titres ; entier |
+| `discovery` | entier de 0 à 100 |
+| `decades` | sans doublon ; vide par défaut |
+| `taste` | 50 artistes au plus par liste, 20 genres au plus ; `genres` vide par défaut |
+| `keep` | 100 titres au plus, positions distinctes |
+| `avoid` | 300 titres au plus |
+| `locale` | `fr`, `en`, `en-GB`… ; `fr` par défaut |
+| `title` / `description` | 100 / 300 caractères au plus |
+| `artist`, `title` d'un titre | 200 caractères au plus |
+| `year` | entier de 1900 à 2100 |
+| `reason` | 300 caractères au plus |
+| `candidates` | 1 à 100 |
+
+Les champs inconnus sont retirés à la validation, côté requête comme côté réponse : un champ en trop n'entre jamais dans le domaine.
 
 ## Règles côté Worker
 
