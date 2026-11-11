@@ -1,0 +1,139 @@
+# Architecture
+
+## Vue d'ensemble
+
+```
+┌──────────────────────────── Téléphone ────────────────────────────┐
+│  App Expo                                                         │
+│   ui ◄── features ──► domain ◄── infra                            │
+│                                   ├─ spotify   (API Spotify)      │
+│                                   ├─ forge     (Worker)           │
+│                                   ├─ db        (SQLite)           │
+│                                   └─ secure    (jetons)           │
+└──────────┬───────────────────────────────┬────────────────────────┘
+           │ jeton Spotify de la personne  │ jeton Spotify + demande
+           ▼                               ▼
+   api.spotify.com                 Cloudflare Worker ──► API Anthropic (Claude)
+                                   (sans stockage)
+```
+
+Trois acteurs :
+
+- **L'app** fait tout ce qui touche au compte Spotify : connexion, lecture des écoutes, recherche des titres, écriture de la playlist. Elle garde l'historique en local.
+- **Le Worker** ne fait qu'une chose : recevoir une demande de forge, appeler Claude, renvoyer une liste de titres candidats. Il existe pour que la clé Anthropic ne soit jamais dans l'app.
+- **Spotify** reste la source de vérité des playlists envoyées.
+
+## Monorepo
+
+```
+apps/
+  mobile/        App Expo (React Native, TypeScript, Expo Router)
+  worker/        Cloudflare Worker (TypeScript)
+packages/
+  shared/        Types et schémas partagés : contrat de forge, réglages
+design/          Maquettes sources et tokens (voir docs/DESIGN.md)
+docs/
+```
+
+Gestionnaire de paquets : pnpm avec workspaces. Les versions exactes (SDK Expo, React Native, Wrangler) se choisissent au moment du scaffold, sur les dernières versions stables, après lecture de leur documentation.
+
+## Couches de l'app
+
+```
+apps/mobile/src/
+  ui/            Composants Braise sans logique métier (Button, HeatBar, TrackRow…)
+  features/      Écrans et orchestration : auth, create, anvil, pieces
+  domain/        Logique pure : types, règles de trempe et de reforge, résolution
+  infra/         Accès au monde extérieur : spotify, forge, db, secure
+```
+
+Règle de dépendance : tout pointe vers le domaine (`features → domain ← infra`, et `features → ui`). Précisément :
+
+- `domain` n'importe rien de React, d'Expo ni du réseau. Il définit les interfaces dont il a besoin (`SpotifyGateway`, `ForgeGateway`, `PieceRepository`).
+- `infra` implémente ces interfaces. Elle importe le domaine, jamais l'inverse.
+- `features` assemble domaine et infra, et expose des hooks aux écrans.
+- `ui` ne connaît ni Spotify ni le Worker.
+
+## Choix techniques
+
+| Sujet | Choix | Raison |
+|---|---|---|
+| Navigation | Expo Router | Standard Expo |
+| Connexion Spotify | `expo-auth-session`, PKCE | Pas de secret dans l'app |
+| Jetons | `expo-secure-store` | Stockage chiffré du système |
+| Base locale | `expo-sqlite` | Historique hors ligne, sans serveur |
+| Appels réseau | TanStack Query | Cache, reprise, états de chargement |
+| État du brouillon | Zustand | Un petit store pour la playlist en cours |
+| Validation | Zod | Schémas partagés app et Worker |
+| Tests | Jest + React Native Testing Library (app), Vitest (Worker, shared) | Outils par défaut de chaque environnement |
+| Worker | Cloudflare Workers | Gratuit à cette échelle, sans serveur à maintenir |
+
+Un choix de ce tableau peut être remis en cause dans une issue, avec la raison. Pas en silence dans une PR.
+
+## Flux de forge
+
+1. L'app construit une `ForgeRequest` (voir [`GENERATION.md`](GENERATION.md)) : prompt, réglages, et, si « mes écoutes » est activé, un résumé des goûts lu sur Spotify.
+2. L'app envoie la demande au Worker, avec le jeton d'accès Spotify dans l'en-tête `Authorization`.
+3. Le Worker vérifie le jeton en appelant `GET /me` chez Spotify, compare l'identifiant du compte à sa liste autorisée, puis appelle Claude.
+4. Le Worker renvoie des **candidats** : titre, artiste, année, raison, et une position dans la progression.
+5. L'app **résout** chaque candidat par une recherche Spotify. Les introuvables et les doublons sont écartés.
+6. L'app marque chaque titre « connu » ou « découverte » (bibliothèque et écoutes de la personne).
+7. L'app garde le nombre de titres demandé, dans l'ordre de la progression, et affiche l'aperçu.
+
+La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer).
+
+## Autorisation du Worker
+
+Le Worker n'a pas de comptes à lui. Il s'appuie sur Spotify :
+
+- chaque requête porte un jeton d'accès Spotify valide ;
+- le Worker appelle `GET /me` et lit l'identifiant du compte ;
+- il refuse tout identifiant absent du secret `ALLOWED_SPOTIFY_IDS` ;
+- le résultat de cette vérification est gardé en mémoire quelques minutes pour ne pas doubler chaque appel.
+
+Une limite de requêtes par compte protège la facture Anthropic.
+
+Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAUDE_MODEL`.
+
+## Modèle de données local
+
+SQLite, sur le téléphone. Schéma indicatif, à figer dans l'issue dédiée.
+
+**`pieces`** : une playlist forgée.
+
+| Champ | Rôle |
+|---|---|
+| `id` | Identifiant local |
+| `owner_spotify_id` | Compte qui l'a forgée |
+| `title`, `description` | Écrits par l'IA, modifiables |
+| `prompt` | Le prompt d'origine |
+| `settings` | Réglages en JSON (longueur, découverte, époques, progression, écoutes) |
+| `spotify_playlist_id` | Vide tant que la playlist n'est pas envoyée |
+| `created_at`, `updated_at`, `sent_at` | Dates |
+
+**`piece_tracks`** : les titres d'une pièce, dans l'ordre.
+
+| Champ | Rôle |
+|---|---|
+| `piece_id`, `position` | Rattachement et ordre |
+| `spotify_uri` | Identifiant Spotify du titre |
+| `title`, `artist`, `year` | Copie pour l'affichage hors ligne |
+| `reason` | « Pourquoi ce titre » |
+| `known` | Connu ou découverte |
+| `quenched` | Trempé ou non |
+
+**`rejected_tracks`** : titres refusés pour une pièce (`piece_id`, `spotify_uri`, `artist`, `title`).
+
+**`molds`** : moules, c'est-à-dire modèles réutilisables (`id`, `owner_spotify_id`, `name`, `prompt`, `settings`, `created_at`).
+
+**`track_cache`** : résolutions déjà faites (`query_key`, `spotify_uri`, métadonnées, `resolved_at`).
+
+Les données sont cloisonnées par `owner_spotify_id` : se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
+
+## Erreurs à traiter dès la conception
+
+- Hors ligne : l'historique reste lisible, la forge et l'envoi sont désactivés avec un message clair.
+- Jeton expiré ou révoqué : rafraîchissement, sinon retour à la connexion sans perdre le brouillon.
+- Compte hors liste autorisée : message explicite, pas d'erreur technique brute.
+- Trop peu de titres résolus : relancer une forge complémentaire une fois, puis afficher ce qu'on a.
+- Playlist supprimée côté Spotify : proposer de la recréer au prochain rafraîchissement.
