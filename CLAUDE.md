@@ -28,4 +28,14 @@ Les règles de travail sont dans [`AGENTS.md`](AGENTS.md). Lis-le en entier avan
 
 ## Commandes
 
-À compléter par l'issue de mise en place du monorepo (installation, lint, typecheck, tests, lancement de l'app et du Worker). Tant que cette section est vide, le socle n'est pas livré.
+Prérequis : Node 22 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
+
+```bash
+pnpm install                                # installe les trois paquets du monorepo
+pnpm mobile                                 # lance Metro (Expo) pour l'app
+pnpm worker                                 # lance le Worker en local (http://localhost:8787)
+pnpm -r typecheck                           # typecheck des trois paquets
+pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d.ts après une modification de wrangler.jsonc
+```
+
+Lint et tests : à venir avec l'issue d'outillage.

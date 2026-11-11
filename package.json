@@ -1,0 +1,12 @@
+{
+  "name": "spotiforge",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "mobile": "pnpm --filter @spotiforge/mobile start",
+    "worker": "pnpm --filter @spotiforge/worker dev"
+  }
+}
