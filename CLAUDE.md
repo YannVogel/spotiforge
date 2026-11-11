@@ -43,3 +43,5 @@ pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d
 ```
 
 ESLint interdit à `apps/mobile/src/domain/` d'importer React, React Native, Expo ou `infra/`.
+
+La CI (`.github/workflows/ci.yml`) lance `pnpm lint`, `pnpm typecheck` et `pnpm test` sur chaque PR et sur `main`.
