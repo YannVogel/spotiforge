@@ -28,14 +28,18 @@ Les règles de travail sont dans [`AGENTS.md`](AGENTS.md). Lis-le en entier avan
 
 ## Commandes
 
-Prérequis : Node 22 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
+Prérequis : Node 22.12 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
 
 ```bash
 pnpm install                                # installe les trois paquets du monorepo
 pnpm mobile                                 # lance Metro (Expo) pour l'app
 pnpm worker                                 # lance le Worker en local (http://localhost:8787)
-pnpm -r typecheck                           # typecheck des trois paquets
+pnpm lint                                   # ESLint puis Prettier en vérification, sur tout le repo
+pnpm format                                 # reformate avec Prettier
+pnpm typecheck                              # typecheck des trois paquets
+pnpm test                                   # Jest (app) et Vitest (Worker, shared)
+pnpm --filter @spotiforge/mobile test -- <motif>   # un seul paquet, un seul fichier
 pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d.ts après une modification de wrangler.jsonc
 ```
 
-Lint et tests : à venir avec l'issue d'outillage.
+ESLint interdit à `apps/mobile/src/domain/` d'importer React, React Native, Expo ou `infra/`.

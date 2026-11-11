@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "wrangler dev",
     "types": "wrangler types",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@spotiforge/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "~6.0.3",
+    "vitest": "^5.1.0",
     "wrangler": "^4.160.0"
   }
 }

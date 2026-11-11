@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+apps/worker/worker-configuration.d.ts
+design/
+coverage/
+.expo/
+dist/
+# La prose des docs n'est pas reformatée automatiquement.
+*.md
