@@ -1,11 +1,21 @@
 import type { HealthResponse } from '@spotiforge/shared';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import worker from './index';
 
-function call(method: string, path: string): Promise<Response> {
-  return worker.fetch(new Request(`http://localhost${path}`, { method }));
+const validEnv = {
+  ANTHROPIC_API_KEY: 'fake-anthropic-key',
+  ALLOWED_SPOTIFY_IDS: 'fake-account-1',
+  CLAUDE_MODEL: 'fake-model',
+} satisfies Env;
+
+function call(method: string, path: string, env: Env = validEnv): Promise<Response> {
+  return worker.fetch(new Request(`http://localhost${path}`, { method }), env);
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('GET /health', () => {
   it('répond 200 avec le statut du Worker', async () => {
@@ -26,4 +36,19 @@ it('répond 404 sur une route inconnue', async () => {
   const response = await call('GET', '/inconnue');
 
   expect(response.status).toBe(404);
+});
+
+describe('configuration invalide', () => {
+  it('répond 500 et journalise le nom de la variable, sans sa valeur', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const response = await call('GET', '/health', { ...validEnv, ANTHROPIC_API_KEY: '' });
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: 'misconfigured' });
+    expect(consoleError).toHaveBeenCalledWith(
+      'Invalid worker configuration: ANTHROPIC_API_KEY is missing',
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain('fake-account-1');
+  });
 });

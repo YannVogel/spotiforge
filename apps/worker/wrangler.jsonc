@@ -7,4 +7,12 @@
   "observability": {
     "enabled": true,
   },
+  // Valeurs non secrètes, versionnées.
+  "vars": {
+    "CLAUDE_MODEL": "claude-sonnet-5-5",
+  },
+  // Secrets : `wrangler secret put` en production, `.dev.vars` en local (voir `.dev.vars.example`).
+  "secrets": {
+    "required": ["ANTHROPIC_API_KEY", "ALLOWED_SPOTIFY_IDS"],
+  },
 }
