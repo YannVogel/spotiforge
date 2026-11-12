@@ -5,7 +5,9 @@ import { SignInScreen } from './SignInScreen';
 
 it('propose une seule action : se connecter avec Spotify', async () => {
   const onSignIn = jest.fn();
-  await render(<SignInScreen signingIn={false} message={null} onSignIn={onSignIn} />);
+  await render(
+    <SignInScreen signingIn={false} offline={false} message={null} onSignIn={onSignIn} />,
+  );
 
   expect(screen.getByRole('header', { name: 'Allume la forge' })).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Se connecter avec Spotify' }));
@@ -15,7 +17,7 @@ it('propose une seule action : se connecter avec Spotify', async () => {
 
 it('pendant la connexion, le bouton est occupé', async () => {
   const onSignIn = jest.fn();
-  await render(<SignInScreen signingIn message={null} onSignIn={onSignIn} />);
+  await render(<SignInScreen signingIn offline={false} message={null} onSignIn={onSignIn} />);
 
   const button = screen.getByRole('button', { name: 'Connexion…' });
   expect(button).toBeBusy();
@@ -25,7 +27,12 @@ it('pendant la connexion, le bouton est occupé', async () => {
 
 it('le message « compte non autorisé » explique quoi faire', async () => {
   await render(
-    <SignInScreen signingIn={false} message={signInFailureText('forbidden')} onSignIn={() => {}} />,
+    <SignInScreen
+      signingIn={false}
+      offline={false}
+      message={signInFailureText('forbidden')}
+      onSignIn={() => {}}
+    />,
   );
 
   expect(screen.getByRole('alert')).toHaveTextContent(
@@ -42,4 +49,13 @@ it('chaque motif a son message, sauf l’annulation volontaire', () => {
   expect(signedOutText('forbidden')).toBe(signInFailureText('forbidden'));
   expect(signedOutText('signedOut')).toBeNull();
   expect(signedOutText(null)).toBeNull();
+});
+
+it('hors ligne, la connexion attend le réseau', async () => {
+  const onSignIn = jest.fn();
+  await render(<SignInScreen signingIn={false} offline message={null} onSignIn={onSignIn} />);
+
+  expect(screen.getByText(/la connexion à Spotify reprendra avec le réseau/)).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Se connecter avec Spotify' }));
+  expect(onSignIn).not.toHaveBeenCalled();
 });

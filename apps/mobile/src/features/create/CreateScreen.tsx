@@ -24,6 +24,7 @@ import { colors, size, space } from '../../ui/theme';
 import { SIGN_IN_COPY } from '../auth/copy';
 import { useDraftStore } from '../draft/draft-store';
 import { FORGE_COPY, failureText, progressText } from '../forge/copy';
+import { OFFLINE_COPY } from '../network/copy';
 import type { ForgeState } from '../forge/forge-store';
 import { useAlloyStore } from '../taste/taste-store';
 import { CREATE_COPY } from './copy';
@@ -32,6 +33,8 @@ import { DecadeChoices, DiscoverySetting, LengthSetting, ShapeChoices } from './
 
 type CreateScreenProps = {
   forge: ForgeState;
+  /** Hors ligne : la forge attend le réseau, le minerai reste modifiable. */
+  offline: boolean;
   /** Pièce à reprendre sur l'enclume, s'il y en a une. */
   resume: { title: string } | null;
   onResume: () => void;
@@ -48,6 +51,7 @@ type CreateScreenProps = {
 /** « Qu'est-ce qu'on forge ? » : le minerai et les réglages, branchés sur le brouillon. */
 export function CreateScreen({
   forge,
+  offline,
   resume,
   onResume,
   onDismissResume,
@@ -125,7 +129,12 @@ export function CreateScreen({
               {progressText(forge.progress)}
             </Text>
           )}
-          {forge.status === 'failed' && (
+          {offline && forge.status !== 'forging' && (
+            <Text color="textSoft" style={styles.status} accessibilityLiveRegion="polite">
+              {OFFLINE_COPY.create}
+            </Text>
+          )}
+          {forge.status === 'failed' && !offline && (
             <Text color="text" style={styles.status} accessibilityRole="alert">
               {failureText(forge.failure)}
             </Text>
@@ -134,7 +143,7 @@ export function CreateScreen({
             label={forge.status === 'failed' ? FORGE_COPY.retry : CREATE_COPY.forge}
             loading={forge.status === 'forging'}
             loadingLabel={FORGE_COPY.forging}
-            disabled={!canForge(draft)}
+            disabled={!canForge(draft) || offline}
             onPress={onForge}
           />
           {forge.status === 'forging' && (

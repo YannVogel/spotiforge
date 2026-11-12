@@ -9,6 +9,7 @@ import { isSentAndUnchanged } from '../../domain/send';
 import { HeroTitle, OreField, PrimaryButton, SecondaryButton, Text, TrackRow } from '../../ui';
 import { borderWidth, colors, gradients, size, space } from '../../ui/theme';
 import { failureText } from '../forge/copy';
+import { OFFLINE_COPY } from '../network/copy';
 import type { ReforgeState, SendState } from './anvil-store';
 import { ANVIL_COPY } from './copy';
 import { sendFailureText } from './send-failure';
@@ -17,6 +18,8 @@ type AnvilScreenProps = {
   record: PieceRecord;
   reforge: ReforgeState;
   send: SendState;
+  /** Hors ligne : reforger et envoyer attendent le réseau ; la pièce reste lisible. */
+  offline: boolean;
   onToggleQuench: (spotifyUri: string) => void;
   onRename: (title: string, description: string) => void;
   /** Écouter un titre (ouverture dans Spotify). */
@@ -36,6 +39,7 @@ export function AnvilScreen({
   record,
   reforge,
   send,
+  offline,
   onToggleQuench,
   onRename,
   onOpenTrack,
@@ -112,6 +116,7 @@ export function AnvilScreen({
         record={record}
         reforge={reforge}
         send={send}
+        offline={offline}
         onReforge={onReforge}
         onSend={onSend}
         onOpenPlaylist={onOpenPlaylist}
@@ -123,7 +128,14 @@ export function AnvilScreen({
 
 type AnvilActionsProps = Pick<
   AnvilScreenProps,
-  'record' | 'reforge' | 'send' | 'onReforge' | 'onSend' | 'onOpenPlaylist' | 'onRecreatePlaylist'
+  | 'record'
+  | 'reforge'
+  | 'send'
+  | 'offline'
+  | 'onReforge'
+  | 'onSend'
+  | 'onOpenPlaylist'
+  | 'onRecreatePlaylist'
 >;
 
 /** Pied de l'enclume : reforger, envoyer (ou ouvrir la playlist envoyée), et les échecs. */
@@ -131,6 +143,7 @@ function AnvilActions({
   record,
   reforge,
   send,
+  offline,
   onReforge,
   onSend,
   onOpenPlaylist,
@@ -145,6 +158,11 @@ function AnvilActions({
 
   return (
     <View style={styles.footer}>
+      {offline && (
+        <Text color="textSoft" style={styles.status} accessibilityLiveRegion="polite">
+          {OFFLINE_COPY.anvil}
+        </Text>
+      )}
       {reforge.status === 'failed' && (
         <Text style={styles.status} accessibilityRole="alert">
           {failureText(reforge.failure)}
@@ -162,7 +180,7 @@ function AnvilActions({
       )}
       <SecondaryButton
         label={hot > 0 ? ANVIL_COPY.reforge(hot) : ANVIL_COPY.allQuenched}
-        disabled={hot === 0 || sending}
+        disabled={hot === 0 || sending || offline}
         loading={reforging}
         loadingLabel={ANVIL_COPY.reforging}
         onPress={onReforge}
@@ -178,7 +196,7 @@ function AnvilActions({
                 ? ANVIL_COPY.retrySend
                 : ANVIL_COPY.send
           }
-          disabled={reforging}
+          disabled={reforging || offline}
           loading={sending}
           loadingLabel={ANVIL_COPY.sending}
           onPress={playlistMissing ? onRecreatePlaylist : onSend}

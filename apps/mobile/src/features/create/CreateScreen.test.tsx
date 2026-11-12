@@ -11,6 +11,7 @@ const draft = () => useDraftStore.getState().draft;
 async function renderScreen(
   forge: ForgeState = { status: 'idle' },
   resume: { title: string } | null = null,
+  offline = false,
 ) {
   const onForge = jest.fn();
   const onCancelForge = jest.fn();
@@ -21,6 +22,7 @@ async function renderScreen(
   await render(
     <CreateScreen
       forge={forge}
+      offline={offline}
       resume={resume}
       onResume={onResume}
       onDismissResume={onDismissResume}
@@ -236,4 +238,17 @@ it('donne accès à la déconnexion', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Se déconnecter (Camille)' }));
 
   expect(onSignOut).toHaveBeenCalledTimes(1);
+});
+
+it('hors ligne, la forge attend le réseau et le minerai reste modifiable', async () => {
+  useDraftStore.getState().setPrompt('Route de nuit');
+  const { onForge } = await renderScreen({ status: 'idle' }, null, true);
+
+  expect(screen.getByText(/Pas de connexion internet : la forge reprendra/)).toBeOnTheScreen();
+  const button = screen.getByRole('button', { name: 'Forger la playlist' });
+  expect(button).toBeDisabled();
+  await fireEvent.press(button);
+  expect(onForge).not.toHaveBeenCalled();
+  await fireEvent.changeText(screen.getByLabelText('Le minerai — ton moment'), 'Autre minerai');
+  expect(draft().prompt).toBe('Autre minerai');
 });
