@@ -8,7 +8,7 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 ## État
 
-En construction. En place : le monorepo (`apps/mobile`, `apps/worker`, `packages/shared`) avec lint, tests et CI ; le thème Braise et ses composants ; l'écran Création branché sur le brouillon ; le domaine (assemblage, trempe, reforge, correspondance des titres) ; la base locale ; le Worker de forge (`POST /forge`) ; la connexion, la session et le client Spotify, encore non vérifiés sur un vrai compte. Pas encore branchés de bout en bout : la connexion dans l'interface, la forge depuis l'app, l'aperçu et l'envoi. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
+En construction, parcours principal branché de bout en bout mais **pas encore essayé sur un vrai compte Spotify** : connexion, Création, forge (résumé des écoutes, Worker, résolution, complément, connu / découverte), enclume (trempe, reforge, édition, écoute, animations), envoi et rafraîchissement d'une playlist, pièces enregistrées sur le téléphone et reprises au lancement, données cloisonnées par compte, hors ligne et barrière d'erreur. Le Worker limite les forges par compte et se déploie à la main (voir plus bas), sans avoir encore été déployé. Manquent surtout : « Mes pièces » et les moules dans l'interface (maquettes à dessiner), l'icône, les builds internes. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
 
 Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
 
