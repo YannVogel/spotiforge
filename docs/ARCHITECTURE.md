@@ -54,6 +54,10 @@ Règle de dépendance : tout pointe vers le domaine (`features → domain ← in
 - `features` assemble domaine et infra, et expose des hooks aux écrans. La racine de composition, `features/app/services.ts`, est le seul endroit qui crée l'infra réelle (session, client Spotify, client du Worker, base SQLite) ; tout le reste reçoit ses dépendances, ce qui le garde testable.
 - `ui` ne connaît ni Spotify ni le Worker.
 
+## Navigation et session
+
+`features/app/AppStack.tsx` garde la navigation par la session (`Stack.Protected` d'Expo Router, avec `redirectTo`) : sans session, seul l'écran de connexion (`/sign-in`) est accessible, même par lien direct ; une fois connecté, on arrive sur Création, et la connexion n'est plus accessible. L'écran de lancement reste affiché tant que la session gardée n'est pas reprise. Les écrans de démonstration (`/theme`, `/components`) restent hors de la garde, en développement seulement.
+
 ## Choix techniques
 
 | Sujet | Choix | Raison |

@@ -1,24 +1,27 @@
-import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AppStack } from '../features/app/AppStack';
 import { getAppServices } from '../features/app/services';
 import { startPiecePersistence } from '../features/pieces/persistence';
 import { watchAccountChanges } from '../features/session/account-scope';
+import { setSession, useSessionStore } from '../features/session/session-store';
 import { getAppConfig } from '../infra/config';
-import { colors, useThemeFonts } from '../ui/theme';
+import { useThemeFonts } from '../ui/theme';
 
 // Valide la configuration dès le démarrage : une valeur manquante est signalée tout de suite,
 // par son nom, plutôt qu'au premier appel réseau.
 getAppConfig();
 
-// Garde l'écran de lancement jusqu'au chargement des polices (appel global, sans attendre,
-// comme le recommande la doc d'expo-splash-screen).
+// Garde l'écran de lancement jusqu'au chargement des polices et de la session (appel global,
+// sans attendre, comme le recommande la doc d'expo-splash-screen).
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const ready = useThemeFonts();
+  const fontsReady = useThemeFonts();
+  const session = useSessionStore((store) => store.session);
+  const ready = fontsReady && session.status !== 'restoring';
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
@@ -27,7 +30,8 @@ export default function RootLayout() {
   // Un autre compte ne voit jamais ce que le précédent avait en mémoire.
   useEffect(() => watchAccountChanges(), []);
 
-  // Chaque changement de la pièce sur l'enclume est enregistré sur le téléphone.
+  // Ouvre les services (la session gardée est reprise au passage) ; chaque changement de la pièce
+  // sur l'enclume est ensuite enregistré sur le téléphone.
   useEffect(() => {
     let stop: (() => void) | undefined;
     let unmounted = false;
@@ -35,12 +39,14 @@ export default function RootLayout() {
       .then(({ pieces }) => {
         if (!unmounted) stop = startPiecePersistence(pieces).stop;
       })
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
         console.error(
-          'Local pieces could not be opened',
+          'App services could not be opened',
           error instanceof Error ? error.name : 'unknown',
-        ),
-      );
+        );
+        // Sans services, pas de session reprise : l'écran de connexion permet de réessayer.
+        setSession({ status: 'signedOut', reason: null });
+      });
     return () => {
       unmounted = true;
       stop?.();
@@ -51,7 +57,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      <AppStack signedIn={session.status === 'signedIn'} />
       <StatusBar style="light" />
     </>
   );
