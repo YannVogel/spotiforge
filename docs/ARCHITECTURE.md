@@ -90,7 +90,7 @@ La **reforge** suit le même flux, avec en plus la liste des titres trempés (à
 
 ## Envoi sur Spotify
 
-`domain/send.ts` écrit la pièce sur le compte : création d'une playlist **privée** (`POST /me/playlists`) si la pièce n'en a pas encore, puis **remplacement** de ses titres par le premier lot de 100 (`PUT /playlists/{id}/items`) et ajout des lots suivants (`POST`). L'identifiant de la playlist est noté sur la pièce dès sa création : un nouvel essai après une panne la réutilise, et le remplacement repart de zéro, donc ni seconde playlist ni doublon. Une pièce envoyée puis modifiée (reforge, titre) peut être renvoyée dans la même playlist ; la mise à jour de son nom et de sa description relève du rafraîchissement.
+`domain/send.ts` écrit la pièce sur le compte : création d'une playlist **privée** (`POST /me/playlists`) si la pièce n'en a pas encore, puis **remplacement** de ses titres par le premier lot de 100 (`PUT /playlists/{id}/items`) et ajout des lots suivants (`POST`). L'identifiant de la playlist est noté sur la pièce dès sa création : un nouvel essai après une panne la réutilise, et le remplacement repart de zéro, donc ni seconde playlist ni doublon. Une pièce envoyée puis modifiée (reforge, titre) est **rafraîchie** dans la même playlist : titres remplacés (les trempés restent à leur place), puis nom et description mis à jour (`PUT /playlists/{id}`). Si la playlist n'existe plus (`404`), l'enclume le dit et propose « Recréer la playlist » : une nouvelle est créée, jamais en silence.
 
 ## Autorisation du Worker
 

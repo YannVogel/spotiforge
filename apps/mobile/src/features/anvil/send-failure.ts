@@ -1,12 +1,20 @@
 import { ForgeError } from '../../domain/forge';
+import { PlaylistMissingError } from '../../domain/send';
 import { NotSignedInError, SessionExpiredError } from '../../domain/session';
 import { SpotifyError } from '../../domain/spotify';
 
 export type SendFailure =
-  'signed_out' | 'forbidden' | 'offline' | 'spotify_busy' | 'unavailable' | 'bug';
+  | 'playlist_missing'
+  | 'signed_out'
+  | 'forbidden'
+  | 'offline'
+  | 'spotify_busy'
+  | 'unavailable'
+  | 'bug';
 
 /** Traduit une erreur d'envoi en échec affichable ; l'inconnu devient un bug. */
 export function sendFailureOf(error: unknown): SendFailure {
+  if (error instanceof PlaylistMissingError) return 'playlist_missing';
   if (error instanceof SpotifyError) {
     switch (error.kind) {
       case 'unauthorized':
@@ -34,6 +42,8 @@ export function sendFailureOf(error: unknown): SendFailure {
 /** Ce qui se passe, puis quoi faire (docs/DESIGN.md). Une reprise ne crée jamais de doublon. */
 export function sendFailureText(failure: SendFailure): string {
   switch (failure) {
+    case 'playlist_missing':
+      return 'Cette playlist n’existe plus sur Spotify : elle a sans doute été supprimée. Tu peux la recréer avec ces titres.';
     case 'signed_out':
       return 'Ta session Spotify n’est plus active. Reconnecte-toi, puis réessaie l’envoi : ta pièce est gardée.';
     case 'forbidden':

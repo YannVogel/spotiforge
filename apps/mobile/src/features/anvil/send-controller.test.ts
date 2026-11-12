@@ -2,7 +2,7 @@ import { SpotifyError } from '../../domain/spotify';
 import { makePieceRecord } from '../../infra/db/fixtures';
 import { useAnvilStore } from './anvil-store';
 import { sendFailureOf } from './send-failure';
-import { type SendDependencies, startSend } from './send-controller';
+import { recreatePlaylist, type SendDependencies, startSend } from './send-controller';
 
 const NOW = new Date('2026-11-12T12:00:00.000Z');
 const record = makePieceRecord();
@@ -12,6 +12,7 @@ function spotify() {
     createPlaylist: jest.fn(async () => ({ id: 'fakePlaylist1' })),
     replacePlaylistItems: jest.fn(async () => {}),
     addPlaylistItems: jest.fn(async () => {}),
+    updatePlaylistDetails: jest.fn(async () => {}),
   };
 }
 
@@ -81,4 +82,25 @@ it.each([
   [new TypeError('bug'), 'bug'],
 ] as const)('traduit %s en « %s »', (error, failure) => {
   expect(sendFailureOf(error)).toBe(failure);
+});
+
+it('une playlist disparue est signalée, puis recréée à la demande', async () => {
+  const fake = spotify();
+  fake.replacePlaylistItems.mockRejectedValueOnce(new SpotifyError('unavailable', 404));
+  useAnvilStore.getState().open({
+    ...record,
+    spotifyPlaylistId: 'gone',
+    sentAt: '2026-11-11T20:00:00.000Z',
+  });
+
+  await startSend(deps(fake));
+  expect(useAnvilStore.getState().send).toEqual({ status: 'failed', failure: 'playlist_missing' });
+
+  await recreatePlaylist(deps(fake));
+
+  expect(fake.createPlaylist).toHaveBeenCalledTimes(1);
+  expect(useAnvilStore.getState().record).toMatchObject({
+    spotifyPlaylistId: 'fakePlaylist1',
+    sentAt: NOW.toISOString(),
+  });
 });

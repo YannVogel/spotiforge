@@ -11,6 +11,7 @@ function ConnectedAnvil(props: {
   onSend?: () => void;
   onOpenTrack?: (uri: string) => void;
   onOpenPlaylist?: (id: string) => void;
+  onRecreatePlaylist?: () => void;
 }) {
   const record = useAnvilStore((state) => state.record);
   const reforge = useAnvilStore((state) => state.reforge);
@@ -30,6 +31,7 @@ function ConnectedAnvil(props: {
       onReforge={props.onReforge ?? (() => {})}
       onSend={props.onSend ?? (() => {})}
       onOpenPlaylist={props.onOpenPlaylist ?? (() => {})}
+      onRecreatePlaylist={props.onRecreatePlaylist ?? (() => {})}
     />
   );
 }
@@ -261,4 +263,16 @@ describe('envoi', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Réessayer l’envoi' }));
     expect(onSend).toHaveBeenCalledTimes(1);
   });
+});
+
+it('une playlist supprimée côté Spotify : explique et propose de la recréer', async () => {
+  const onSend = jest.fn();
+  const onRecreatePlaylist = jest.fn();
+  useAnvilStore.setState({ send: { status: 'failed', failure: 'playlist_missing' } });
+  await render(<ConnectedAnvil onSend={onSend} onRecreatePlaylist={onRecreatePlaylist} />);
+
+  expect(screen.getByRole('alert')).toHaveTextContent(/n’existe plus sur Spotify/);
+  await fireEvent.press(screen.getByRole('button', { name: 'Recréer la playlist' }));
+  expect(onRecreatePlaylist).toHaveBeenCalledTimes(1);
+  expect(onSend).not.toHaveBeenCalled();
 });
