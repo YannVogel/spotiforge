@@ -14,4 +14,9 @@ export const ANVIL_COPY = {
   allQuenched: 'Tout est trempé',
   reforging: 'Reforge en cours…',
   send: 'Envoyer sur Spotify',
+  edit: 'Modifier le titre et la description',
+  editDone: 'Terminer',
+  titleField: 'Titre de la playlist',
+  descriptionField: 'Description',
+  listen: (title: string) => `Écouter ${title} dans Spotify`,
 } as const;

@@ -12,11 +12,11 @@ type OreFieldProps = {
   placeholder?: string;
   maxLength?: number;
   editable?: boolean;
+  /** Lignes visibles (4 pour le minerai). */
+  lines?: number;
 };
 
-const VISIBLE_LINES = 4;
-
-/** Zone de saisie du minerai (le prompt). Bordure `ember` pendant la saisie. */
+/** Zone de saisie Braise : le minerai (le prompt), et les textes d'une pièce. Bordure `ember` pendant la saisie. */
 export function OreField({
   label,
   value,
@@ -24,6 +24,7 @@ export function OreField({
   placeholder,
   maxLength,
   editable = true,
+  lines = 4,
 }: OreFieldProps) {
   const [focused, setFocused] = useState(false);
 
@@ -51,7 +52,7 @@ export function OreField({
         onBlur={() => setFocused(false)}
         cursorColor={colors.ember}
         selectionColor={colors.ember}
-        style={styles.input}
+        style={[styles.input, { height: (textStyles.body.lineHeight ?? 0) * lines }]}
       />
     </View>
   );
@@ -70,7 +71,6 @@ const styles = StyleSheet.create({
   input: {
     ...textStyles.body,
     color: colors.text,
-    height: (textStyles.body.lineHeight ?? 0) * VISIBLE_LINES,
     padding: 0,
   },
 });
