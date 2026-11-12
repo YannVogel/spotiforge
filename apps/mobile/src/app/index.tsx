@@ -1,10 +1,13 @@
-import { APP_NAME } from '@spotiforge/shared';
-import { StyleSheet, View } from 'react-native';
+import { CreateScreen } from '../features/create/CreateScreen';
 
-export default function HomeScreen() {
-  return <View style={styles.screen} accessibilityLabel={APP_NAME} />;
+/** Premier écran : la création. */
+export default function CreateRoute() {
+  return (
+    <CreateScreen
+      // Branché par l'orchestration de la forge (#34) : la requête est prête.
+      onForge={() => {}}
+      // Branché par l'écran « Mes pièces » (#43).
+      onOpenPieces={() => {}}
+    />
+  );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-});
