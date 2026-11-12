@@ -86,3 +86,6 @@ export function toRecentArtistNames(page: z.output<typeof itemsPageSchema>): str
     track.artists.map((artist) => artist.name),
   );
 }
+
+/** `GET /me/library/contains` : un booléen par URI demandée, dans le même ordre. */
+export const libraryContainsSchema = z.array(z.boolean());

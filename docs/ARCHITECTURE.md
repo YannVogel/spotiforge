@@ -77,8 +77,8 @@ Un choix de ce tableau peut être remis en cause dans une issue, avec la raison.
 3. Le Worker vérifie le jeton en appelant `GET /me` chez Spotify, compare l'identifiant du compte à sa liste autorisée, puis appelle Claude.
 4. Le Worker renvoie des **candidats** : titre, artiste, année, raison, et une position dans la progression.
 5. L'app **résout** chaque candidat par une recherche Spotify. Les introuvables et les doublons sont écartés.
-6. L'app marque chaque titre « connu » ou « découverte » (bibliothèque et écoutes de la personne).
-7. L'app garde le nombre de titres demandé, dans l'ordre de la progression, et affiche l'aperçu.
+6. L'app garde le nombre de titres demandé, dans l'ordre de la progression.
+7. L'app marque chaque titre retenu « connu » ou « découverte » (bibliothèque et écoutes de la personne), puis affiche l'aperçu. Marquer après l'assemblage évite d'interroger la bibliothèque pour des candidats écartés.
 
 La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer).
 

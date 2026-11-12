@@ -33,4 +33,6 @@ export interface SpotifyGateway {
   getTopArtists(): Promise<ListenedArtist[]>;
   /** Artistes des écoutes récentes, de la plus récente à la plus ancienne. */
   getRecentlyPlayedArtists(): Promise<string[]>;
+  /** Pour chaque URI (40 au plus), présente ou non dans la bibliothèque de la personne. */
+  libraryContains(uris: readonly string[]): Promise<boolean[]>;
 }

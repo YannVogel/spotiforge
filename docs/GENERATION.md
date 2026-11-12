@@ -118,7 +118,7 @@ Pour chaque candidat :
 
 Ensuite :
 
-- marquer « connu » si le titre est dans la bibliothèque de la personne ou si son artiste figure dans ses écoutes ; sinon « découverte » ;
+- marquer « connu » si le titre est dans la bibliothèque de la personne ou si son artiste figure dans ses écoutes ; sinon « découverte ». La bibliothèque est interrogée par lots de 40 URI (`GET /me/library/contains`), seulement pour les titres d'artistes non écoutés et seulement pour les titres retenus dans la pièce, pour ménager le quota. Si elle ne répond pas, l'estimation `familiar` du LLM sert de repli (`domain/familiarity.ts`) ;
 - placer les titres trempés à leur position, remplir les places libres avec les candidats résolus triés par `slot` ;
 - couper à la longueur demandée : en titres, au nombre exact ; en minutes, à la coupe la plus proche de la durée visée (on ajoute des titres jusqu'à l'atteindre, puis on retire le dernier s'il en éloigne) ;
 - si les candidats manquent avant un titre trempé, la place reste vide et les titres suivants remontent : un titre trempé n'est jamais retiré, et c'est le seul cas où sa position change ;
