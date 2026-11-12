@@ -41,6 +41,7 @@ pnpm format                                 # reformate avec Prettier
 pnpm typecheck                              # typecheck des trois paquets
 pnpm test                                   # Jest (app) et Vitest (Worker, shared)
 pnpm --filter @spotiforge/mobile test -- <motif>   # un seul paquet, un seul fichier
+pnpm --filter @spotiforge/worker evaluate   # évaluation manuelle et payante du prompt (docs/GENERATION.md), jamais en CI
 pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d.ts après une modification de wrangler.jsonc
 ```
 
