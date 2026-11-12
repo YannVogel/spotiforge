@@ -7,6 +7,14 @@
   "observability": {
     "enabled": true,
   },
+  // Limite de forges par compte (src/limit/forge-limiter.ts) : un Durable Object par compte, stockage
+  // SQLite (seul disponible sur l'offre gratuite).
+  "durable_objects": {
+    "bindings": [{ "name": "FORGE_LIMITER", "class_name": "ForgeLimiter" }],
+  },
+  "exports": {
+    "ForgeLimiter": { "type": "durable-object", "storage": "sqlite" },
+  },
   // Valeurs non secrètes, versionnées.
   "vars": {
     "CLAUDE_MODEL": "claude-opus-5-5",

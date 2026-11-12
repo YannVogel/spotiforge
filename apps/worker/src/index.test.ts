@@ -3,13 +3,28 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { makeForgeRequest, makeForgeResponse } from '@spotiforge/shared/testing';
 
+import { sha256Hex } from './fingerprint';
 import { messageReply } from './forge/fake-anthropic';
 import worker from './index';
+import type { SlotVerdict } from './limit/sliding-window';
+
+/** Namespace simulé du Durable Object `ForgeLimiter` : garde les noms d'instance demandés. */
+function fakeLimiter(verdict: SlotVerdict = { allowed: true }) {
+  const names: string[] = [];
+  const namespace = {
+    getByName: (name: string) => {
+      names.push(name);
+      return { take: async () => verdict };
+    },
+  };
+  return { names, namespace: namespace as unknown as Env['FORGE_LIMITER'] };
+}
 
 const validEnv = {
   ANTHROPIC_API_KEY: 'fake-anthropic-key',
   ALLOWED_SPOTIFY_IDS: 'fake-account-1',
   CLAUDE_MODEL: 'fake-model',
+  FORGE_LIMITER: fakeLimiter().namespace,
 } satisfies Env;
 
 function call(
@@ -121,7 +136,8 @@ describe('POST /forge', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('renvoie une ForgeResponse pour un compte autorisé (Spotify et Claude simulés)', async () => {
+  /** Spotify et Claude simulés au niveau HTTP. */
+  function stubUpstreams() {
     const fetch = vi.fn(async (input: string | URL | Request) => {
       const url = new Request(input).url;
       if (url.startsWith('https://api.spotify.com/v1/me')) {
@@ -133,18 +149,94 @@ describe('POST /forge', () => {
       throw new Error(`Unexpected request to ${url}`);
     });
     vi.stubGlobal('fetch', fetch);
+    return fetch;
+  }
 
-    const response = await worker.fetch(
+  const forge = (env: Env, token = 'token-forge') =>
+    worker.fetch(
       new Request('http://localhost/forge', {
         method: 'POST',
         body,
-        headers: { Authorization: 'Bearer token-forge' },
+        headers: { Authorization: `Bearer ${token}` },
       }),
-      validEnv,
+      env,
     );
+
+  it('renvoie une ForgeResponse pour un compte autorisé (Spotify et Claude simulés)', async () => {
+    const fetch = stubUpstreams();
+    const limiter = fakeLimiter();
+
+    const response = await forge({ ...validEnv, FORGE_LIMITER: limiter.namespace });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(makeForgeResponse());
     expect(fetch).toHaveBeenCalledTimes(2);
+    // Le compteur du compte est nommé par l'empreinte de son identifiant, jamais par l'identifiant.
+    expect(limiter.names).toEqual([await sha256Hex('fake-account-1')]);
+  });
+
+  it('répond 429 avec Retry-After au-delà de la limite, sans appeler Claude', async () => {
+    const fetch = stubUpstreams();
+    const limiter = fakeLimiter({ allowed: false, retryAfterSeconds: 600 });
+
+    const response = await forge({ ...validEnv, FORGE_LIMITER: limiter.namespace }, 'token-429');
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('600');
+    expect(await response.json()).toEqual({ error: 'rate_limited' });
+    expect(fetch.mock.calls.map(([input]) => new Request(input).url)).toEqual([
+      'https://api.spotify.com/v1/me',
+    ]);
+  });
+
+  it('ne consulte pas le compteur pour un compte refusé', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ id: 'fake-account-other' })),
+    );
+    const limiter = fakeLimiter();
+
+    const response = await forge({ ...validEnv, FORGE_LIMITER: limiter.namespace }, 'token-other');
+
+    expect(response.status).toBe(403);
+    expect(limiter.names).toEqual([]);
+  });
+});
+
+describe('CORS', () => {
+  // L'app mobile n'en a pas besoin : aucune réponse n'autorise une origine, et un navigateur
+  // refuse donc tout appel venu d'une page web.
+  const corsHeaders = (response: Response) =>
+    [...response.headers.keys()].filter((name) => name.startsWith('access-control-'));
+
+  it('n’autorise aucune origine, même sur /health', async () => {
+    const response = await worker.fetch(
+      new Request('http://localhost/health', { headers: { Origin: 'https://site.example' } }),
+      validEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(corsHeaders(response)).toEqual([]);
+  });
+
+  it('fait échouer la requête préalable d’un navigateur sur /forge', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await worker.fetch(
+      new Request('http://localhost/forge', {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'https://site.example',
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'authorization, content-type',
+        },
+      }),
+      validEnv,
+    );
+
+    expect(response.ok).toBe(false);
+    expect(corsHeaders(response)).toEqual([]);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

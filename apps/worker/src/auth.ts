@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { sha256Hex } from './fingerprint';
+
 const SPOTIFY_ME_URL = 'https://api.spotify.com/v1/me';
 /** Durée pendant laquelle une identité vérifiée est réutilisée sans rappeler Spotify. */
 export const IDENTITY_TTL_MS = 5 * 60 * 1000;
@@ -34,11 +36,6 @@ export function bearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-async function fingerprint(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 function remember(cache: IdentityCache, key: string, accountId: string, now: number) {
   for (const [cachedKey, entry] of cache) {
     if (entry.expiresAt <= now) cache.delete(cachedKey);
@@ -57,7 +54,7 @@ function remember(cache: IdentityCache, key: string, accountId: string, now: num
  */
 export function createAuthenticator({ fetch, now, cache }: Dependencies) {
   async function identify(token: string): Promise<AuthResult> {
-    const key = await fingerprint(token);
+    const key = await sha256Hex(token);
     const cached = cache.get(key);
     if (cached && cached.expiresAt > now()) return { ok: true, accountId: cached.accountId };
 
