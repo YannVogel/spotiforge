@@ -14,7 +14,7 @@
            │ jeton Spotify de la personne  │ jeton Spotify + demande
            ▼                               ▼
    api.spotify.com                 Cloudflare Worker ──► API Anthropic (Claude)
-                                   (sans stockage)
+                                   (ne garde qu'un compteur de forges)
 ```
 
 Trois acteurs :
@@ -91,9 +91,11 @@ Le Worker n'a pas de comptes à lui. Il s'appuie sur Spotify :
 - il refuse tout identifiant absent du secret `ALLOWED_SPOTIFY_IDS` ;
 - le résultat de cette vérification est gardé en mémoire quelques minutes pour ne pas doubler chaque appel.
 
-Une limite de requêtes par compte protège la facture Anthropic.
+Une limite de forges par compte protège la facture Anthropic : **20 forges acceptées sur toute heure glissante** (`FORGE_LIMIT`, `apps/worker/src/limit/forge-limiter.ts`), `429` au-delà avec l'en-tête `Retry-After`. Seules les requêtes valides comptent, car ce sont elles qui appellent Claude. Le compteur est un Durable Object par compte (binding `FORGE_LIMITER`), nommé par l'empreinte SHA-256 de l'identifiant Spotify et non par l'identifiant. Il ne garde que les dates des forges de l'heure écoulée, et une alarme efface tout une heure après la dernière forge acceptée. C'est la seule donnée que le Worker conserve d'une requête à l'autre. Le binding Rate Limiting de Cloudflare a été écarté : il ne compte que sur 10 ou 60 secondes, par emplacement et de façon approximative. Si le compteur est injoignable, la forge est refusée (`503`) sans appeler Claude.
 
-Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAUDE_MODEL`.
+CORS : le Worker n'envoie aucun en-tête `Access-Control-*`. L'app mobile n'en a pas besoin, et un navigateur refuse donc tout appel venu d'une page web (la requête préalable `OPTIONS` échoue).
+
+Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAUDE_MODEL`. Procédure de déploiement : [`README.md`](../README.md#déployer-le-worker).
 
 ## Modèle de données local
 

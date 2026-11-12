@@ -82,6 +82,7 @@ Les champs inconnus sont retirés à la validation, côté requête comme côté
 - En reforge, ne demander que de quoi remplir les places libres, avec la même marge.
 - La sortie du LLM est contrainte à un schéma JSON, puis validée. Une sortie invalide déclenche une seule nouvelle tentative, puis une erreur propre.
 - Le modèle utilisé est lu dans la variable `CLAUDE_MODEL`. Choix et méthode : section suivante.
+- Limite : 20 forges acceptées par compte sur toute heure glissante (`FORGE_LIMIT`). Seule une requête valide compte, juste avant l'appel à Claude ; au-delà, `429` (voir « Erreurs » et [`ARCHITECTURE.md`](ARCHITECTURE.md#autorisation-du-worker)).
 - Le Worker ne journalise ni le prompt ni la réponse.
 
 ## Modèle et sortie structurée
@@ -133,6 +134,7 @@ La normalisation et l'assemblage sont du code pur du domaine, couverts par des t
 | Jeton Spotify absent ou invalide | `401` | Rafraîchir le jeton, rejouer une fois |
 | Compte hors liste autorisée | `403` | Message : compte non autorisé |
 | Spotify injoignable pendant la vérification du jeton | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |
-| Trop de demandes | `429` | Message : la forge refroidit, réessayer plus tard |
+| Trop de demandes (20 forges déjà acceptées dans l'heure glissante) | `429` (`rate_limited`), en-tête `Retry-After` : secondes avant qu'une forge se libère | Message : la forge refroidit, réessayer plus tard |
+| Compteur de forges injoignable | `503` (`limiter_unavailable`), sans appel à Claude | Message d'échec, bouton pour réessayer, brouillon conservé |
 | Requête hors contrat ou corps illisible | `400` (`invalid_request` avec les champs fautifs, ou `invalid_json`) | Bug de l'app : message d'échec |
 | LLM indisponible ou sortie invalide | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |

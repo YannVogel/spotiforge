@@ -42,6 +42,7 @@ pnpm typecheck                              # typecheck des trois paquets
 pnpm test                                   # Jest (app) et Vitest (Worker, shared)
 pnpm --filter @spotiforge/mobile test -- <motif>   # un seul paquet, un seul fichier
 pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d.ts après une modification de wrangler.jsonc
+pnpm --filter @spotiforge/worker exec wrangler deploy   # déploie le Worker (premier déploiement et secrets : README)
 ```
 
 ESLint interdit à `apps/mobile/src/domain/` d'importer React, React Native, Expo ou `infra/`.

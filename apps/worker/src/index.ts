@@ -2,8 +2,11 @@ import { APP_NAME, type HealthResponse } from '@spotiforge/shared';
 
 import { type AuthResult, createAuthenticator, type IdentityCache } from './auth';
 import { parseWorkerConfig } from './config';
+import { sha256Hex } from './fingerprint';
 import { createForgeGenerator } from './forge/generate';
 import { handleForge } from './forge/handler';
+
+export { ForgeLimiter } from './limit/forge-limiter';
 
 // Cache d'identités partagé par les requêtes d'un même isolat : uniquement des données simples
 // (empreinte du jeton → identifiant de compte, date d'expiration), jamais d'objet de requête.
@@ -44,7 +47,10 @@ export default {
         apiKey: config.anthropicApiKey,
         model: config.claudeModel,
       });
-      return handleForge(request, generate);
+      // Un compteur par compte, nommé par l'empreinte de son identifiant, jamais par l'identifiant.
+      const takeSlot = async () =>
+        env.FORGE_LIMITER.getByName(await sha256Hex(auth.accountId)).take();
+      return handleForge(request, { generate, takeSlot });
     }
 
     return Response.json({ error: 'not_found' }, { status: 404 });
