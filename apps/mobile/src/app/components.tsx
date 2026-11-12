@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   AlloySwitch,
   Chip,
+  HeatBar,
   HeroTitle,
   OreField,
   PrimaryButton,
@@ -30,6 +31,8 @@ export default function ComponentsDemoScreen() {
   const [alloy, setAlloy] = useState(true);
   const [decades, setDecades] = useState<Decade[]>(['80s', '00s', '10s']);
   const [shape, setShape] = useState<Shape>('rise');
+  const [minutes, setMinutes] = useState(40);
+  const [discovery, setDiscovery] = useState(60);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -45,6 +48,23 @@ export default function ComponentsDemoScreen() {
         <HeroTitle>{'Qu’est-ce\nqu’on\nforge ?'}</HeroTitle>
         <OreField label="Le minerai — ton moment" value={ore} onChangeText={setOre} />
         <AlloySwitch label="Alliage : mes écoutes" value={alloy} onValueChange={setAlloy} />
+        <HeatBar
+          min={10}
+          max={120}
+          step={5}
+          value={minutes}
+          onChange={setMinutes}
+          accessibilityLabel="Durée en minutes"
+          accessibilityValueText={`${minutes} minutes`}
+        />
+        <HeatBar
+          min={0}
+          max={100}
+          step={10}
+          value={discovery}
+          onChange={setDiscovery}
+          accessibilityLabel="Part de découverte en pourcentage"
+        />
         <View style={styles.row}>
           {DECADES.map((decade) => (
             <Chip

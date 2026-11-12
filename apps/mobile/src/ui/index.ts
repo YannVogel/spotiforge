@@ -1,5 +1,6 @@
 export { AlloySwitch } from './AlloySwitch';
 export { Chip } from './Chip';
+export { HeatBar } from './heat-bar';
 export { HeroTitle } from './HeroTitle';
 export { OreField } from './OreField';
 export { type ButtonProps, PrimaryButton } from './PrimaryButton';
