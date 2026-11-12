@@ -73,6 +73,12 @@ describe('thème et design/tokens.json', () => {
     expect(style.textTransform).toBe(tokenStyle.uppercase ? 'uppercase' : undefined);
   });
 
+  it("rend à la première ligne d'un titre serré la place que l'interlignage lui retire", () => {
+    expect(textStyles.hero.lineHeight).toBe(62);
+    expect(textStyles.hero.paddingTop).toBe(74 - 62);
+    expect(textStyles.body.paddingTop).toBeUndefined();
+  });
+
   it('embarque un fichier pour chaque graisse déclarée', () => {
     for (const [role, font] of Object.entries(tokens.font)) {
       for (const weight of font.weights) {

@@ -1,5 +1,6 @@
 import { Redirect } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '../ui/Text';
 import { colors, space, size, TEXT_VARIANTS, type TextVariant } from '../ui/theme';
@@ -24,16 +25,18 @@ export default function ThemeDemoScreen() {
   if (!__DEV__) return <Redirect href="/" />;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {TEXT_VARIANTS.map((variant) => (
-        <View key={variant} style={styles.sample}>
-          <Text variant="meta" color="textMuted">
-            {variant}
-          </Text>
-          <Text variant={variant}>{SAMPLES[variant]}</Text>
-        </View>
-      ))}
-    </ScrollView>
+    <SafeAreaView style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {TEXT_VARIANTS.map((variant) => (
+          <View key={variant} style={styles.sample}>
+            <Text variant="meta" color="textMuted">
+              {variant}
+            </Text>
+            <Text variant={variant}>{SAMPLES[variant]}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

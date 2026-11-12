@@ -45,12 +45,16 @@ export const glows = {
 } satisfies Record<keyof typeof tokens.glow, ViewStyle | TextStyle>;
 
 export function toTextStyle(token: TypeToken): TextStyle {
+  const lineHeight =
+    token.lineHeight === undefined ? undefined : Math.round(token.size * token.lineHeight);
   return {
     fontFamily: fontFamily(token.font, token.weight),
     fontSize: token.size,
-    ...(token.lineHeight !== undefined && {
-      lineHeight: Math.round(token.size * token.lineHeight),
-    }),
+    ...(lineHeight !== undefined && { lineHeight }),
+    // Un interlignage plus petit que la police (grands titres serrés) rogne le haut de la
+    // première ligne : la marge intérieure lui rend la place du débord.
+    ...(lineHeight !== undefined &&
+      lineHeight < token.size && { paddingTop: token.size - lineHeight }),
     ...(token.letterSpacing !== undefined && { letterSpacing: token.size * token.letterSpacing }),
     ...(token.uppercase && { textTransform: 'uppercase' }),
   };
