@@ -1,20 +1,17 @@
-import { z } from 'zod';
-
 import type { Account } from '../../domain/session';
+import { SPOTIFY_API_URL } from './http';
+import { meSchema, toAccount } from './schemas';
 
-const ME_URL = 'https://api.spotify.com/v1/me';
-
-// `GET /me` ne renvoie plus email, pays ni abonnement (docs/SPOTIFY_API.md) : schéma tolérant.
-const meSchema = z.object({
-  id: z.string().min(1),
-  display_name: z.string().nullish(),
-});
+const ME_URL = `${SPOTIFY_API_URL}/me`;
 
 export type AccountResult =
   | { ok: true; account: Account }
   | { ok: false; reason: 'unauthorized' | 'forbidden' | 'unavailable' };
 
-/** Identité du compte connecté (`GET /me`, endpoint confirmé). */
+/**
+ * Identité du compte, avant que la session existe (à la connexion). Ensuite, passer par le
+ * client : `createSpotifyGateway(...).getCurrentAccount()`.
+ */
 export async function fetchSpotifyAccount(
   accessToken: string,
   fetchFn: typeof fetch = fetch,
@@ -32,5 +29,5 @@ export async function fetchSpotifyAccount(
 
   const me = meSchema.safeParse(await response.json().catch(() => null));
   if (!me.success) return { ok: false, reason: 'unavailable' };
-  return { ok: true, account: { id: me.data.id, displayName: me.data.display_name ?? null } };
+  return { ok: true, account: toAccount(me.data) };
 }
