@@ -3,6 +3,7 @@ apps/worker/worker-configuration.d.ts
 design/
 coverage/
 .expo/
+**/expo-env.d.ts
 dist/
 # La prose des docs n'est pas reformatée automatiquement.
 *.md
