@@ -2,6 +2,10 @@ import { create } from 'zustand';
 
 import type { PieceRecord } from '../../domain/history';
 import * as rules from '../../domain/piece';
+import type { ForgeFailure } from '../forge/failure';
+
+export type ReforgeState =
+  { status: 'idle' } | { status: 'reforging' } | { status: 'failed'; failure: ForgeFailure };
 
 function withPiece(record: PieceRecord, piece: rules.Piece): PieceRecord {
   return { ...record, tracks: [...piece.tracks], rejected: [...piece.rejected] };
@@ -10,6 +14,7 @@ function withPiece(record: PieceRecord, piece: rules.Piece): PieceRecord {
 type AnvilStore = {
   /** La pièce sur l'enclume, ou `null` si rien n'a encore été forgé. */
   record: PieceRecord | null;
+  reforge: ReforgeState;
   open: (record: PieceRecord) => void;
   toggleQuench: (spotifyUri: string) => void;
   close: () => void;
@@ -18,10 +23,14 @@ type AnvilStore = {
 /** La pièce en cours de travail, partagée par l'enclume et ses actions. Les règles vivent dans le domaine. */
 export const useAnvilStore = create<AnvilStore>()((set) => ({
   record: null,
-  open: (record) => set({ record }),
+  reforge: { status: 'idle' },
+  open: (record) => set({ record, reforge: { status: 'idle' } }),
+  // Pendant une reforge, la trempe est figée : la demande est déjà partie avec ces titres.
   toggleQuench: (spotifyUri) =>
-    set(({ record }) =>
-      record ? { record: withPiece(record, rules.toggleQuench(record, spotifyUri)) } : {},
+    set(({ record, reforge }) =>
+      record && reforge.status !== 'reforging'
+        ? { record: withPiece(record, rules.toggleQuench(record, spotifyUri)) }
+        : {},
     ),
-  close: () => set({ record: null }),
+  close: () => set({ record: null, reforge: { status: 'idle' } }),
 }));

@@ -8,11 +8,13 @@ import { AnvilScreen } from './AnvilScreen';
 // L'écran branché sur le vrai store, comme dans la route.
 function ConnectedAnvil(props: { onReforge?: () => void; onSend?: () => void }) {
   const record = useAnvilStore((state) => state.record);
+  const reforge = useAnvilStore((state) => state.reforge);
   const toggleQuench = useAnvilStore((state) => state.toggleQuench);
   if (!record) return null;
   return (
     <AnvilScreen
       record={record}
+      reforge={reforge}
       onToggleQuench={toggleQuench}
       onBack={() => {}}
       onReforge={props.onReforge ?? (() => {})}
@@ -43,7 +45,7 @@ const record = makePieceRecord({
 });
 
 beforeEach(() => {
-  useAnvilStore.setState({ record });
+  useAnvilStore.setState({ record, reforge: { status: 'idle' } });
 });
 
 it('affiche le titre, la description, la légende et chaque titre de la pièce', async () => {
@@ -109,4 +111,41 @@ it('lit l’état de chaque titre sans la couleur, par le texte du bouton', asyn
 
   expect(screen.getAllByText('TREMPER')).toHaveLength(2);
   expect(screen.getAllByText('TREMPÉ')).toHaveLength(1);
+});
+
+describe('reforge en cours', () => {
+  beforeEach(() => {
+    useAnvilStore.setState({ reforge: { status: 'reforging' } });
+  });
+
+  it('garde l’écran : les trempés restent, les titres à chaud passent en attente', async () => {
+    await render(<ConnectedAnvil />);
+
+    expect(screen.getByText('Nightcall')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Tremper Tick of the Clock' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remettre au feu Nightcall' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reforge en cours…' })).toBeBusy();
+  });
+
+  it('n’envoie pas pendant la reforge', async () => {
+    const onSend = jest.fn();
+    await render(<ConnectedAnvil onSend={onSend} />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Envoyer sur Spotify' }));
+
+    expect(onSend).not.toHaveBeenCalled();
+  });
+});
+
+it('après un échec de reforge, dit ce qui se passe et laisse réessayer', async () => {
+  const onReforge = jest.fn();
+  useAnvilStore.setState({ reforge: { status: 'failed', failure: { kind: 'offline' } } });
+  await render(<ConnectedAnvil onReforge={onReforge} />);
+
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Pas de connexion internet. Vérifie ton réseau, puis réessaie.',
+  );
+  expect(screen.getByText('Tick of the Clock')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Reforger 2 titres' }));
+  expect(onReforge).toHaveBeenCalledTimes(1);
 });
