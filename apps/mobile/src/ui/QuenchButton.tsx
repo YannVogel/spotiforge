@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet } from 'react-native';
 
+import { quenchHaptic } from './haptics';
 import { Text } from './Text';
 import { borderWidth, colors, size } from './theme';
 
@@ -36,7 +37,11 @@ export function QuenchButton({
       }
       accessibilityState={{ selected: quenched, disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        // L'état d'abord : le retour haptique ne doit jamais retarder ni bloquer la trempe.
+        onPress();
+        if (!quenched) quenchHaptic();
+      }}
       hitSlop={(size.touchMin - size.quenchButton.height) / 2}
       style={[styles.base, quenched ? styles.quenched : styles.hot]}
     >
