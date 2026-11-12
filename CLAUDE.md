@@ -28,7 +28,7 @@ Les règles de travail sont dans [`AGENTS.md`](AGENTS.md). Lis-le en entier avan
 
 ## Commandes
 
-Prérequis : Node 22.12 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
+Prérequis : Node 22.13 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
 
 ```bash
 pnpm install                                # installe les trois paquets du monorepo
