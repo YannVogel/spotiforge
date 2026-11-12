@@ -28,4 +28,22 @@ Les règles de travail sont dans [`AGENTS.md`](AGENTS.md). Lis-le en entier avan
 
 ## Commandes
 
-À compléter par l'issue de mise en place du monorepo (installation, lint, typecheck, tests, lancement de l'app et du Worker). Tant que cette section est vide, le socle n'est pas livré.
+Prérequis : Node 22.13 ou plus, pnpm 11 (activé par `corepack enable`, version fixée dans `package.json`).
+
+```bash
+pnpm install                                # installe les trois paquets du monorepo
+cp apps/mobile/.env.example apps/mobile/.env              # configuration de l'app (voir README)
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars     # secrets locaux du Worker (voir README)
+pnpm mobile                                 # lance Metro (Expo) pour l'app
+pnpm worker                                 # lance le Worker en local (http://localhost:8787)
+pnpm lint                                   # ESLint puis Prettier en vérification, sur tout le repo
+pnpm format                                 # reformate avec Prettier
+pnpm typecheck                              # typecheck des trois paquets
+pnpm test                                   # Jest (app) et Vitest (Worker, shared)
+pnpm --filter @spotiforge/mobile test -- <motif>   # un seul paquet, un seul fichier
+pnpm --filter @spotiforge/worker types      # régénère worker-configuration.d.ts après une modification de wrangler.jsonc
+```
+
+ESLint interdit à `apps/mobile/src/domain/` d'importer React, React Native, Expo ou `infra/`.
+
+La CI (`.github/workflows/ci.yml`) lance `pnpm lint`, `pnpm typecheck` et `pnpm test` sur chaque PR et sur `main`.

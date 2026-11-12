@@ -8,7 +8,33 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 ## État
 
-Démarrage. Aucun code applicatif pour l'instant : le repo contient le cadrage, le design et le backlog (issues, epics, milestones).
+En construction. En place : le monorepo (`apps/mobile`, `apps/worker`, `packages/shared`) avec lint, tests et CI ; le thème Braise et ses composants ; l'écran Création branché sur le brouillon ; le domaine (assemblage, trempe, reforge, correspondance des titres) ; la base locale ; le Worker de forge (`POST /forge`) ; la connexion, la session et le client Spotify, encore non vérifiés sur un vrai compte. Pas encore branchés de bout en bout : la connexion dans l'interface, la forge depuis l'app, l'aperçu et l'envoi. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
+
+Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
+
+## Configuration
+
+Le repo est public : aucune valeur réelle n'y est versionnée. Après un clone, copier les deux modèles puis remplacer les valeurs factices :
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env
+cp apps/worker/.dev.vars.example apps/worker/.dev.vars
+```
+
+| Où | Valeur | Rôle |
+|---|---|---|
+| `apps/mobile/.env` | `EXPO_PUBLIC_SPOTIFY_CLIENT_ID` | Identifiant client de l'app Spotify (dashboard développeur) |
+| `apps/mobile/.env` | `EXPO_PUBLIC_WORKER_URL` | URL du Worker de forge |
+| `apps/mobile/app.json` | `scheme` | Schéma de l'app (`spotiforge`), base de l'URI de redirection Spotify |
+| `apps/worker/.dev.vars` | `ANTHROPIC_API_KEY` | Secret : clé de l'API Anthropic |
+| `apps/worker/.dev.vars` | `ALLOWED_SPOTIFY_IDS` | Secret : comptes Spotify autorisés, séparés par des virgules |
+| `apps/worker/wrangler.jsonc` | `CLAUDE_MODEL` | Variable non secrète : modèle Claude utilisé |
+
+URI de redirection à déclarer dans le dashboard Spotify (connexion en PKCE) : `spotiforge://callback` pour un build, y compris de développement ; dans Expo Go, `exp://<adresse IP de l'ordinateur>:8081/--/callback` (elle change avec l'adresse IP).
+
+Les variables `EXPO_PUBLIC_*` sont intégrées au bundle de l'app : elles ne doivent contenir aucun secret. En production, les secrets du Worker se posent avec `pnpm --filter @spotiforge/worker exec wrangler secret put <NOM>`.
+
+Une valeur manquante ou invalide est signalée par son nom : l'app s'arrête au démarrage avec une `AppConfigError`, le Worker répond `500 misconfigured` et journalise le nom de la variable (jamais sa valeur).
 
 ## Où lire quoi
 

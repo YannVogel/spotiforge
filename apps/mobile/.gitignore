@@ -1,0 +1,8 @@
+# Généré par Expo
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+
+# Dossiers natifs générés (Continuous Native Generation)
+/ios
+/android

@@ -1,0 +1,8 @@
+# Copier vers apps/worker/.dev.vars (ignoré par git) puis remplacer les valeurs factices.
+# En production, ces secrets se posent avec `pnpm exec wrangler secret put <NOM>`.
+
+# Clé de l'API Anthropic. Ne vit que dans le Worker, jamais dans l'app.
+ANTHROPIC_API_KEY=fake-anthropic-api-key
+
+# Identifiants des comptes Spotify autorisés, séparés par des virgules.
+ALLOWED_SPOTIFY_IDS=fake-spotify-id-1,fake-spotify-id-2
