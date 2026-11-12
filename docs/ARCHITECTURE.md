@@ -51,7 +51,7 @@ Règle de dépendance : tout pointe vers le domaine (`features → domain ← in
 
 - `domain` n'importe rien de React, d'Expo ni du réseau. Il définit les interfaces dont il a besoin (`SpotifyGateway`, `ForgeGateway`, `PieceRepository`).
 - `infra` implémente ces interfaces. Elle importe le domaine, jamais l'inverse.
-- `features` assemble domaine et infra, et expose des hooks aux écrans.
+- `features` assemble domaine et infra, et expose des hooks aux écrans. La racine de composition, `features/app/services.ts`, est le seul endroit qui crée l'infra réelle (session, client Spotify, client du Worker, base SQLite) ; tout le reste reçoit ses dépendances, ce qui le garde testable.
 - `ui` ne connaît ni Spotify ni le Worker.
 
 ## Choix techniques
@@ -79,6 +79,8 @@ Un choix de ce tableau peut être remis en cause dans une issue, avec la raison.
 5. L'app **résout** chaque candidat par une recherche Spotify. Les introuvables et les doublons sont écartés.
 6. L'app garde le nombre de titres demandé, dans l'ordre de la progression.
 7. L'app marque chaque titre retenu « connu » ou « découverte » (bibliothèque et écoutes de la personne), puis affiche l'aperçu. Marquer après l'assemblage évite d'interroger la bibliothèque pour des candidats écartés.
+
+L'orchestration vit dans `features/forge/forge-run.ts` : elle remonte son avancement (écoutes, forge, vérification sur Spotify titre par titre, marquage) pour l'état « forge en cours », s'interrompt à l'annulation et ne touche jamais au brouillon. Le client du Worker est `infra/forge/worker-client.ts`. Chaque échec est traduit en message (`features/forge/failure.ts`, tableau « Erreurs » de [`GENERATION.md`](GENERATION.md)), avec un bouton pour réessayer.
 
 La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer).
 
