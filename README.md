@@ -8,7 +8,9 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 ## État
 
-Démarrage. Le monorepo est en place (`apps/mobile`, `apps/worker`, `packages/shared`), sans fonctionnalité pour l'instant. Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
+En construction. En place : le monorepo (`apps/mobile`, `apps/worker`, `packages/shared`) avec lint, tests et CI ; le thème Braise et ses composants ; l'écran Création branché sur le brouillon ; le domaine (assemblage, trempe, reforge, correspondance des titres) ; la base locale ; le Worker de forge (`POST /forge`) ; la connexion, la session et le client Spotify, encore non vérifiés sur un vrai compte. Pas encore branchés de bout en bout : la connexion dans l'interface, la forge depuis l'app, l'aperçu et l'envoi. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
+
+Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
 
 ## Configuration
 
