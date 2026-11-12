@@ -8,19 +8,27 @@ import { CreateScreen } from './CreateScreen';
 
 const draft = () => useDraftStore.getState().draft;
 
-async function renderScreen(forge: ForgeState = { status: 'idle' }) {
+async function renderScreen(
+  forge: ForgeState = { status: 'idle' },
+  resume: { title: string } | null = null,
+) {
   const onForge = jest.fn();
   const onCancelForge = jest.fn();
   const onOpenPieces = jest.fn();
+  const onResume = jest.fn();
+  const onDismissResume = jest.fn();
   await render(
     <CreateScreen
       forge={forge}
+      resume={resume}
+      onResume={onResume}
+      onDismissResume={onDismissResume}
       onForge={onForge}
       onCancelForge={onCancelForge}
       onOpenPieces={onOpenPieces}
     />,
   );
-  return { onForge, onCancelForge, onOpenPieces };
+  return { onForge, onCancelForge, onOpenPieces, onResume, onDismissResume };
 }
 
 const increment = { nativeEvent: { actionName: 'increment' } };
@@ -194,4 +202,27 @@ it('désactive l’alliage avec un message quand Spotify ne donne pas les écout
   expect(alloy).toBeDisabled();
   expect(alloy).not.toBeChecked();
   expect(screen.getByText(/ne donne pas accès à tes écoutes/)).toBeOnTheScreen();
+});
+
+describe('reprise d’une pièce', () => {
+  it('propose de reprendre la pièce qui attend sur l’enclume', async () => {
+    const { onResume, onDismissResume } = await renderScreen(
+      { status: 'idle' },
+      { title: 'Route de nuit' },
+    );
+
+    expect(
+      screen.getByText('Une pièce t’attend sur l’enclume : « Route de nuit ».'),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reprendre la pièce Route de nuit' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Plus tard' }));
+
+    expect(onResume).toHaveBeenCalledTimes(1);
+    expect(onDismissResume).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne propose rien sans pièce, ni pendant une forge', async () => {
+    await renderScreen();
+    expect(screen.queryByText(/Une pièce t’attend/)).toBeNull();
+  });
 });

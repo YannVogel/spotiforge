@@ -33,4 +33,10 @@ export const CREATE_COPY = {
     string
   >,
   forge: 'Forger la playlist',
+  resume: {
+    text: (title: string) => `Une pièce t’attend sur l’enclume : « ${title} ».`,
+    action: 'Reprendre la pièce',
+    a11y: (title: string) => `Reprendre la pièce ${title}`,
+    dismiss: 'Plus tard',
+  },
 } as const;
