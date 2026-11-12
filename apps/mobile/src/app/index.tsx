@@ -1,11 +1,28 @@
-import { CreateScreen } from '../features/create/CreateScreen';
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
 
-/** Premier écran : la création. */
+import type { PieceRecord } from '../domain/history';
+import { useAnvilStore } from '../features/anvil/anvil-store';
+import { CreateScreen } from '../features/create/CreateScreen';
+import { useForge } from '../features/forge/use-forge';
+
+/** Premier écran : la création. Une forge réussie pose la pièce sur l'enclume. */
 export default function CreateRoute() {
+  const router = useRouter();
+  const onForged = useCallback(
+    (record: PieceRecord) => {
+      useAnvilStore.getState().open(record);
+      router.push('/anvil');
+    },
+    [router],
+  );
+  const forge = useForge(onForged);
+
   return (
     <CreateScreen
-      // Branché par l'orchestration de la forge (#34) : la requête est prête.
-      onForge={() => {}}
+      forge={forge.state}
+      onForge={forge.start}
+      onCancelForge={forge.cancel}
       // Branché par l'écran « Mes pièces » (#43).
       onOpenPieces={() => {}}
     />

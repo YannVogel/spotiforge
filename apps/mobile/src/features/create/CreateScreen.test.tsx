@@ -1,18 +1,26 @@
-import { forgeRequestSchema } from '@spotiforge/shared';
 import { makeForgeSettings } from '@spotiforge/shared/testing';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { useDraftStore } from '../draft/draft-store';
+import type { ForgeState } from '../forge/forge-store';
 import { setAlloyAvailability, useAlloyStore } from '../taste/taste-store';
 import { CreateScreen } from './CreateScreen';
 
 const draft = () => useDraftStore.getState().draft;
 
-async function renderScreen() {
+async function renderScreen(forge: ForgeState = { status: 'idle' }) {
   const onForge = jest.fn();
+  const onCancelForge = jest.fn();
   const onOpenPieces = jest.fn();
-  await render(<CreateScreen onForge={onForge} onOpenPieces={onOpenPieces} />);
-  return { onForge, onOpenPieces };
+  await render(
+    <CreateScreen
+      forge={forge}
+      onForge={onForge}
+      onCancelForge={onCancelForge}
+      onOpenPieces={onOpenPieces}
+    />,
+  );
+  return { onForge, onCancelForge, onOpenPieces };
 }
 
 const increment = { nativeEvent: { actionName: 'increment' } };
@@ -113,17 +121,60 @@ it('affiche une longueur en titres reprise d’un moule', async () => {
   });
 });
 
-it('déclenche la forge avec une requête valide tirée du brouillon', async () => {
+it('déclenche la forge depuis le brouillon, sans le modifier', async () => {
   const { onForge } = await renderScreen();
 
   await fireEvent.changeText(screen.getByLabelText('Le minerai — ton moment'), ' Route de nuit ');
   await fireEvent.press(screen.getByRole('radio', { name: 'Montée' }));
+  const before = draft();
   await fireEvent.press(screen.getByRole('button', { name: 'Forger la playlist' }));
 
   expect(onForge).toHaveBeenCalledTimes(1);
-  const request = onForge.mock.calls[0]?.[0];
-  expect(forgeRequestSchema.parse(request)).toEqual(request);
-  expect(request).toMatchObject({ prompt: 'Route de nuit', shape: 'rise', locale: 'fr' });
+  expect(draft()).toBe(before);
+});
+
+describe('forge en cours', () => {
+  beforeEach(() => {
+    useDraftStore.getState().setPrompt('Route de nuit');
+  });
+
+  it('affiche l’étape et la progression, et ignore les appuis sur « Forger »', async () => {
+    const { onForge } = await renderScreen({
+      status: 'forging',
+      progress: { stage: 'resolving', done: 12, total: 45 },
+    });
+
+    expect(screen.getByText('Vérification sur Spotify : 12 / 45 titres')).toBeOnTheScreen();
+    const button = screen.getByRole('button', { name: 'Forge en cours…' });
+    expect(button).toBeBusy();
+    await fireEvent.press(button);
+    expect(onForge).not.toHaveBeenCalled();
+  });
+
+  it('permet d’annuler', async () => {
+    const { onCancelForge } = await renderScreen({
+      status: 'forging',
+      progress: { stage: 'forging' },
+    });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Annuler la forge' }));
+
+    expect(onCancelForge).toHaveBeenCalledTimes(1);
+  });
+
+  it('après un échec, dit ce qui se passe et propose de réessayer', async () => {
+    const { onForge } = await renderScreen({
+      status: 'failed',
+      failure: { kind: 'rate_limited', retryAfterMinutes: 10 },
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'La forge refroidit : trop de forges d’affilée. Réessaie dans 10 min.',
+    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Réessayer la forge' }));
+    expect(onForge).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Annuler la forge' })).toBeNull();
+  });
 });
 
 it('ouvre « Mes pièces »', async () => {

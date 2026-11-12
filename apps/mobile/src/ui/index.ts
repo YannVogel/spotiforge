@@ -1,5 +1,6 @@
 export { AlloySwitch } from './AlloySwitch';
 export { Chip } from './Chip';
+export { ForgeGlow } from './ForgeGlow';
 export { HeatBar } from './heat-bar';
 export { HeroTitle } from './HeroTitle';
 export { OreField } from './OreField';
@@ -10,3 +11,4 @@ export { SegmentButton } from './SegmentButton';
 export { Text, type TextProps } from './Text';
 export { TrackRow, type TrackRowProps } from './TrackRow';
 export { Wordmark } from './Wordmark';
+export { useReducedMotion } from './use-reduced-motion';

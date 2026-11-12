@@ -70,7 +70,7 @@ L'écran « Sur l'enclume » porte en haut la lueur `anvilGlow`, pendant de `for
 
 - **Tremper** : le titre passe du chaud au froid en 300 ms environ, la lueur s'éteint. Retour haptique léger.
 - **Reforger** : les titres à chaud s'embrasent brièvement puis sont remplacés. Les titres trempés ne bougent pas.
-- **Forge en cours** : la lueur du foyer en bas d'écran pulse. Pas de spinner générique.
+- **Forge en cours** : la lueur du foyer en bas d'écran pulse (environ 1,8 s par cycle). Pas de spinner générique : le bouton principal affiche « Forge en cours… », une ligne dit l'étape (« Vérification sur Spotify : 12 / 45 titres ») et « Annuler la forge » ramène au minerai.
 - Respecter le réglage système de réduction des animations : dans ce cas, changements d'état instantanés.
 
 ## Vocabulaire de l'interface
