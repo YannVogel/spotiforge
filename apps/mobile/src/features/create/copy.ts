@@ -7,6 +7,8 @@ export const CREATE_COPY = {
   pieces: 'Mes pièces',
   ore: 'Le minerai — ton moment',
   alloy: 'Alliage : mes écoutes',
+  alloyUnavailable:
+    'Spotify ne donne pas accès à tes écoutes pour l’instant : la forge se fera sans alliage.',
   length: {
     title: 'Longueur de la barre',
     minutes: (value: number) => `${value} MIN`,

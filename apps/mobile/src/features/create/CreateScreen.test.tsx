@@ -3,6 +3,7 @@ import { makeForgeSettings } from '@spotiforge/shared/testing';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { useDraftStore } from '../draft/draft-store';
+import { setAlloyAvailability, useAlloyStore } from '../taste/taste-store';
 import { CreateScreen } from './CreateScreen';
 
 const draft = () => useDraftStore.getState().draft;
@@ -21,6 +22,7 @@ const shownValue = (text: string) => screen.getByText(text, { includeHiddenEleme
 
 beforeEach(() => {
   useDraftStore.setState(useDraftStore.getInitialState(), true);
+  useAlloyStore.setState(useAlloyStore.getInitialState(), true);
 });
 
 it('affiche le titre, le minerai et les réglages de la maquette', async () => {
@@ -130,4 +132,15 @@ it('ouvre « Mes pièces »', async () => {
   await fireEvent.press(screen.getByRole('button', { name: 'Mes pièces' }));
 
   expect(onOpenPieces).toHaveBeenCalledTimes(1);
+});
+
+it('désactive l’alliage avec un message quand Spotify ne donne pas les écoutes', async () => {
+  useDraftStore.getState().setUseTaste(true);
+  setAlloyAvailability('unavailable');
+  await renderScreen();
+
+  const alloy = screen.getByRole('switch', { name: 'Alliage : mes écoutes' });
+  expect(alloy).toBeDisabled();
+  expect(alloy).not.toBeChecked();
+  expect(screen.getByText(/ne donne pas accès à tes écoutes/)).toBeOnTheScreen();
 });

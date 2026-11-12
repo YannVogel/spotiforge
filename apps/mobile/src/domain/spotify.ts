@@ -1,5 +1,6 @@
 import type { CatalogTrack } from './match';
 import type { Account } from './session';
+import type { ListenedArtist } from './taste';
 
 export type SpotifyErrorKind =
   /** Jeton refusé même après rafraîchissement : il faut se reconnecter. */
@@ -28,4 +29,8 @@ export interface SpotifyGateway {
   getCurrentAccount(): Promise<Account>;
   /** Recherche de titres (10 résultats au plus), dans l'ordre de pertinence de Spotify. */
   searchTracks(query: { artist: string; title: string }): Promise<CatalogTrack[]>;
+  /** Artistes les plus écoutés (environ six derniers mois), du plus au moins écouté. */
+  getTopArtists(): Promise<ListenedArtist[]>;
+  /** Artistes des écoutes récentes, de la plus récente à la plus ancienne. */
+  getRecentlyPlayedArtists(): Promise<string[]>;
 }

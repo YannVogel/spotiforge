@@ -65,6 +65,14 @@ export const MIGRATIONS: readonly string[] = [
     resolved_at TEXT NOT NULL
   );
   `,
+  // v2 : résumé des écoutes (« Alliage : mes écoutes »), un par compte.
+  `
+  CREATE TABLE taste_cache (
+    owner_spotify_id TEXT PRIMARY KEY NOT NULL,
+    taste TEXT NOT NULL,
+    fetched_at TEXT NOT NULL
+  );
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
