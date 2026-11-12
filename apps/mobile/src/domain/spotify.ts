@@ -35,4 +35,14 @@ export interface SpotifyGateway {
   getRecentlyPlayedArtists(): Promise<string[]>;
   /** Pour chaque URI (40 au plus), présente ou non dans la bibliothèque de la personne. */
   libraryContains(uris: readonly string[]): Promise<boolean[]>;
+  /** Crée une playlist privée, vide, sur le compte. */
+  createPlaylist(details: PlaylistDetails): Promise<{ id: string }>;
+  /** Change le nom et la description d'une playlist du compte. */
+  updatePlaylistDetails(playlistId: string, details: PlaylistDetails): Promise<void>;
+  /** Remplace tous les titres d'une playlist (100 URI au plus). */
+  replacePlaylistItems(playlistId: string, uris: readonly string[]): Promise<void>;
+  /** Ajoute des titres à la fin d'une playlist (100 URI au plus). */
+  addPlaylistItems(playlistId: string, uris: readonly string[]): Promise<void>;
 }
+
+export type PlaylistDetails = { name: string; description: string };

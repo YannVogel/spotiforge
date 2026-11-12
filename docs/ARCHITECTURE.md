@@ -84,6 +84,10 @@ L'orchestration vit dans `features/forge/forge-run.ts` : elle remonte son avance
 
 La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer). Elle partage le cœur de la forge (`runReforge`, même fichier) : seuls les titres à chaud sont remplacés et marqués, le titre et la description de la pièce ne changent pas, et un échec laisse la pièce telle quelle sur l'enclume. Pendant la reforge, l'écran reste affiché : les titres à chaud s'estompent, la trempe est figée.
 
+## Envoi sur Spotify
+
+`domain/send.ts` écrit la pièce sur le compte : création d'une playlist **privée** (`POST /me/playlists`) si la pièce n'en a pas encore, puis **remplacement** de ses titres par le premier lot de 100 (`PUT /playlists/{id}/items`) et ajout des lots suivants (`POST`). L'identifiant de la playlist est noté sur la pièce dès sa création : un nouvel essai après une panne la réutilise, et le remplacement repart de zéro, donc ni seconde playlist ni doublon. Une pièce envoyée puis modifiée (reforge, titre) peut être renvoyée dans la même playlist ; la mise à jour de son nom et de sa description relève du rafraîchissement.
+
 ## Autorisation du Worker
 
 Le Worker n'a pas de comptes à lui. Il s'appuie sur Spotify :

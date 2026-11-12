@@ -89,3 +89,9 @@ export function toRecentArtistNames(page: z.output<typeof itemsPageSchema>): str
 
 /** `GET /me/library/contains` : un booléen par URI demandée, dans le même ordre. */
 export const libraryContainsSchema = z.array(z.boolean());
+
+/** `POST /me/playlists` : seul l'identifiant de la playlist créée est lu. */
+export const createdPlaylistSchema = z.object({ id: z.string().regex(/^[A-Za-z0-9]+$/) });
+
+/** Réponses d'écriture (`snapshot_id`, corps vide…) : rien n'est lu, seul le statut compte. */
+export const anyResponseSchema = z.unknown();

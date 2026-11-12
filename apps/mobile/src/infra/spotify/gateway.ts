@@ -1,6 +1,8 @@
 import { SpotifyError, type SpotifyGateway } from '../../domain/spotify';
 import type { SpotifyHttp } from './http';
 import {
+  anyResponseSchema,
+  createdPlaylistSchema,
   itemsPageSchema,
   libraryContainsSchema,
   meSchema,
@@ -17,6 +19,19 @@ export const SEARCH_LIMIT = 10;
 export const LISTENING_LIMIT = 50;
 /** URI au plus par appel à `GET /me/library/contains`. */
 export const LIBRARY_CONTAINS_LIMIT = 40;
+/** URI au plus par appel à `POST` ou `PUT /playlists/{id}/items`. */
+export const PLAYLIST_ITEMS_LIMIT = 100;
+
+function json(method: 'POST' | 'PUT', body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+function itemsBatch(uris: readonly string[]): { uris: string[] } {
+  if (uris.length > PLAYLIST_ITEMS_LIMIT) {
+    throw new RangeError(`Playlist items calls accept ${PLAYLIST_ITEMS_LIMIT} URIs at most`);
+  }
+  return { uris: [...uris] };
+}
 
 /** Retire ce qui casserait les filtres de champ de la recherche (`:` et guillemets). */
 function searchTerm(value: string): string {
@@ -62,6 +77,39 @@ export function createSpotifyGateway(request: SpotifyHttp): SpotifyGateway {
       // Une réponse qui ne correspond pas aux URI demandées est inexploitable.
       if (saved.length !== uris.length) throw new SpotifyError('unavailable');
       return saved;
+    },
+
+    async createPlaylist({ name, description }) {
+      // Privée par défaut (docs/PRODUCT.md).
+      return request(
+        '/me/playlists',
+        createdPlaylistSchema,
+        json('POST', { name, description, public: false }),
+      );
+    },
+
+    async updatePlaylistDetails(playlistId, { name, description }) {
+      await request(
+        `/playlists/${encodeURIComponent(playlistId)}`,
+        anyResponseSchema,
+        json('PUT', { name, description }),
+      );
+    },
+
+    async replacePlaylistItems(playlistId, uris) {
+      await request(
+        `/playlists/${encodeURIComponent(playlistId)}/items`,
+        anyResponseSchema,
+        json('PUT', itemsBatch(uris)),
+      );
+    },
+
+    async addPlaylistItems(playlistId, uris) {
+      await request(
+        `/playlists/${encodeURIComponent(playlistId)}/items`,
+        anyResponseSchema,
+        json('POST', itemsBatch(uris)),
+      );
     },
 
     async getRecentlyPlayedArtists() {
