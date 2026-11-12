@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "types": "wrangler types --strict-vars=false",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p evaluation",
+    "test": "vitest run",
+    "evaluate": "tsx --env-file-if-exists=.dev.vars evaluation/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -15,6 +16,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.1.0",
     "wrangler": "^4.160.0"
