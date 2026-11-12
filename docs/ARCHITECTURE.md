@@ -152,8 +152,13 @@ Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations d
 
 ## Erreurs à traiter dès la conception
 
-- Hors ligne : l'historique reste lisible, la forge et l'envoi sont désactivés avec un message clair.
-- Jeton expiré ou révoqué : rafraîchissement, sinon retour à la connexion sans perdre le brouillon.
-- Compte hors liste autorisée : message explicite, pas d'erreur technique brute.
-- Trop peu de titres résolus : relancer une forge complémentaire une fois, puis afficher ce qu'on a.
-- Playlist supprimée côté Spotify : proposer de la recréer au prochain rafraîchissement.
+| Cas | Comportement | Où, et quel test le vérifie |
+|---|---|---|
+| Hors ligne | L'app s'ouvre (session reprise sans réseau, polices embarquées, base locale) ; forge, reforge, envoi et connexion désactivés avec un message ; la pièce reste lisible et la trempe possible | `features/network/online.ts` (`expo-network`) ; tests des écrans Création, enclume et connexion |
+| Jeton expiré ou révoqué | Rafraîchissement unique, rejeu ; sinon retour à la connexion (« Ta session Spotify a expiré… »), brouillon gardé pour le même compte | `session-manager`, `infra/spotify/http`, `infra/forge/worker-client`, garde de navigation ; tests de la session, du client HTTP, de `account-scope` et de `AppStack` |
+| Compte hors liste autorisée | Message explicite à la connexion (Spotify), à la forge (Worker) et à l'envoi (Spotify) | `features/auth/copy.ts`, `features/forge/failure.ts`, `features/anvil/send-failure.ts` ; tests de chacun |
+| Trop peu de titres résolus | Forge complémentaire une fois, puis ce qu'on a ; aucun titre : message | `features/forge/forge-run.ts` ; `forge-run.test.ts` |
+| Playlist supprimée côté Spotify | Détectée au renvoi ; « Recréer la playlist » proposé, jamais en silence | `domain/send.ts` ; `send.test.ts`, `send-controller.test.ts` |
+| Erreur imprévue de l'interface | Barrière d'erreur globale : écran « La forge a calé » avec « Réessayer », jamais d'écran blanc ; seul le nom de l'erreur est journalisé | `ErrorBoundary` de `app/_layout.tsx`, `features/app/AppErrorScreen.tsx` ; test de l'écran |
+
+Les messages suivent tous la même règle (`DESIGN.md`) : ce qui se passe, puis quoi faire, en mots simples.

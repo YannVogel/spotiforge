@@ -3,17 +3,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ForgeGlow, HeroTitle, PrimaryButton, Text, Wordmark } from '../../ui';
 import { colors, size, space } from '../../ui/theme';
+import { OFFLINE_COPY } from '../network/copy';
 import { SIGN_IN_COPY } from './copy';
 
 type SignInScreenProps = {
   signingIn: boolean;
+  offline: boolean;
   /** Ce qui s'est passé (compte non autorisé, session expirée, refus…), en mots simples. */
   message: string | null;
   onSignIn: () => void;
 };
 
 /** Premier écran pour une personne non connectée : une seule action, se connecter avec Spotify. */
-export function SignInScreen({ signingIn, message, onSignIn }: SignInScreenProps) {
+export function SignInScreen({ signingIn, offline, message, onSignIn }: SignInScreenProps) {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <ForgeGlow pulsing={signingIn} />
@@ -23,6 +25,11 @@ export function SignInScreen({ signingIn, message, onSignIn }: SignInScreenProps
         <Text color="textSoft">{SIGN_IN_COPY.intro}</Text>
       </ScrollView>
       <View style={styles.footer}>
+        {offline && (
+          <Text color="textSoft" style={styles.message} accessibilityLiveRegion="polite">
+            {OFFLINE_COPY.signIn}
+          </Text>
+        )}
         {message && (
           <Text style={styles.message} accessibilityRole="alert">
             {message}
@@ -30,6 +37,7 @@ export function SignInScreen({ signingIn, message, onSignIn }: SignInScreenProps
         )}
         <PrimaryButton
           label={SIGN_IN_COPY.signIn}
+          disabled={offline}
           loading={signingIn}
           loadingLabel={SIGN_IN_COPY.signingIn}
           onPress={onSignIn}

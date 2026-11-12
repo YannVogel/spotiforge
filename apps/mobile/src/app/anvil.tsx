@@ -6,6 +6,7 @@ import { openPlaylist, openTrack } from '../features/anvil/open-in-spotify';
 import { startReforge } from '../features/anvil/reforge-controller';
 import { recreatePlaylist, startSend } from '../features/anvil/send-controller';
 import { forgeDependencies, sendDependencies } from '../features/forge/dependencies';
+import { useOffline } from '../features/network/online';
 
 /** « Sur l'enclume » : la pièce qui vient d'être forgée. */
 export default function AnvilRoute() {
@@ -13,6 +14,7 @@ export default function AnvilRoute() {
   const record = useAnvilStore((state) => state.record);
   const reforge = useAnvilStore((state) => state.reforge);
   const send = useAnvilStore((state) => state.send);
+  const offline = useOffline();
   const toggleQuench = useAnvilStore((state) => state.toggleQuench);
   const setDetails = useAnvilStore((state) => state.setDetails);
 
@@ -24,6 +26,7 @@ export default function AnvilRoute() {
       record={record}
       reforge={reforge}
       send={send}
+      offline={offline}
       onToggleQuench={toggleQuench}
       onRename={setDetails}
       onOpenTrack={(uri) => void openTrack(uri)}

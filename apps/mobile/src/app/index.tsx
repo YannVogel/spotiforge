@@ -6,6 +6,7 @@ import { useAnvilStore } from '../features/anvil/anvil-store';
 import { signOut } from '../features/auth/dependencies';
 import { CreateScreen } from '../features/create/CreateScreen';
 import { useForge } from '../features/forge/use-forge';
+import { useOffline } from '../features/network/online';
 import { useResumeStore } from '../features/pieces/resume-store';
 import { useResume } from '../features/pieces/use-resume';
 import { useSessionStore } from '../features/session/session-store';
@@ -23,6 +24,7 @@ export default function CreateRoute() {
     [router],
   );
   const forge = useForge(onForged);
+  const offline = useOffline();
   const openAnvil = useCallback(() => router.push('/anvil'), [router]);
   const resume = useResume(openAnvil);
   const session = useSessionStore((store) => store.session);
@@ -31,6 +33,7 @@ export default function CreateRoute() {
   return (
     <CreateScreen
       forge={forge.state}
+      offline={offline}
       resume={resume.offer}
       onResume={resume.resume}
       onDismissResume={resume.dismiss}

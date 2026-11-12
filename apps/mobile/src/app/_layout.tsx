@@ -1,7 +1,9 @@
+import type { ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AppErrorScreen } from '../features/app/AppErrorScreen';
 import { AppStack } from '../features/app/AppStack';
 import { getAppServices } from '../features/app/services';
 import { startPiecePersistence } from '../features/pieces/persistence';
@@ -17,6 +19,15 @@ getAppConfig();
 // Garde l'écran de lancement jusqu'au chargement des polices et de la session (appel global,
 // sans attendre, comme le recommande la doc d'expo-splash-screen).
 void SplashScreen.preventAutoHideAsync();
+
+/** Barrière d'erreur globale (Expo Router) : un écran pour repartir plutôt qu'un écran blanc. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    // Le nom de l'erreur seulement : son message peut citer des données de la personne.
+    console.error('Unexpected render error', error.name);
+  }, [error]);
+  return <AppErrorScreen onRetry={() => void retry()} />;
+}
 
 export default function RootLayout() {
   const fontsReady = useThemeFonts();

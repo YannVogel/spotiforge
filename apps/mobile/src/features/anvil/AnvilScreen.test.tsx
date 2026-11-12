@@ -12,6 +12,7 @@ function ConnectedAnvil(props: {
   onOpenTrack?: (uri: string) => void;
   onOpenPlaylist?: (id: string) => void;
   onRecreatePlaylist?: () => void;
+  offline?: boolean;
 }) {
   const record = useAnvilStore((state) => state.record);
   const reforge = useAnvilStore((state) => state.reforge);
@@ -24,6 +25,7 @@ function ConnectedAnvil(props: {
       record={record}
       reforge={reforge}
       send={send}
+      offline={props.offline ?? false}
       onToggleQuench={toggleQuench}
       onRename={setDetails}
       onOpenTrack={props.onOpenTrack ?? (() => {})}
@@ -275,4 +277,20 @@ it('une playlist supprimée côté Spotify : explique et propose de la recréer'
   await fireEvent.press(screen.getByRole('button', { name: 'Recréer la playlist' }));
   expect(onRecreatePlaylist).toHaveBeenCalledTimes(1);
   expect(onSend).not.toHaveBeenCalled();
+});
+
+it('hors ligne, la pièce reste lisible, reforger et envoyer attendent le réseau', async () => {
+  const onReforge = jest.fn();
+  const onSend = jest.fn();
+  await render(<ConnectedAnvil offline onReforge={onReforge} onSend={onSend} />);
+
+  expect(screen.getByText(/reforger et envoyer reprendront avec le réseau/)).toBeOnTheScreen();
+  expect(screen.getByText('Tick of the Clock')).toBeOnTheScreen();
+  await fireEvent.press(screen.getByRole('button', { name: 'Reforger 2 titres' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Envoyer sur Spotify' }));
+  expect(onReforge).not.toHaveBeenCalled();
+  expect(onSend).not.toHaveBeenCalled();
+  // La trempe reste possible : elle ne demande pas le réseau.
+  await fireEvent.press(screen.getByRole('button', { name: 'Tremper Tick of the Clock' }));
+  expect(screen.getByText('2 TREMPÉS')).toBeOnTheScreen();
 });
