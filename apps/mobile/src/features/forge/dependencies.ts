@@ -10,3 +10,9 @@ export async function forgeDependencies(): Promise<ForgeControllerDependencies> 
   if (session.status !== 'signedIn') throw new ForgeError('unauthorized');
   return { ...services, ownerSpotifyId: session.account.id };
 }
+
+/** Dépendances réelles de l'envoi sur Spotify. */
+export async function sendDependencies() {
+  const { spotify, now } = await getAppServices();
+  return { spotify, now };
+}

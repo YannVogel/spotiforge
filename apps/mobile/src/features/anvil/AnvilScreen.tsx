@@ -5,15 +5,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PieceRecord } from '../../domain/history';
 import { hotTracks, quenchedCount } from '../../domain/piece';
+import { isSentAndUnchanged } from '../../domain/send';
 import { HeroTitle, OreField, PrimaryButton, SecondaryButton, Text, TrackRow } from '../../ui';
 import { borderWidth, colors, gradients, size, space } from '../../ui/theme';
 import { failureText } from '../forge/copy';
-import type { ReforgeState } from './anvil-store';
+import type { ReforgeState, SendState } from './anvil-store';
 import { ANVIL_COPY } from './copy';
+import { sendFailureText } from './send-failure';
 
 type AnvilScreenProps = {
   record: PieceRecord;
   reforge: ReforgeState;
+  send: SendState;
   onToggleQuench: (spotifyUri: string) => void;
   onRename: (title: string, description: string) => void;
   /** Écouter un titre (ouverture dans Spotify). */
@@ -21,24 +24,27 @@ type AnvilScreenProps = {
   onBack: () => void;
   /** Remplace les titres à chaud (#37). */
   onReforge: () => void;
-  /** Crée la playlist sur le compte (#40). */
+  /** Écrit la pièce sur le compte Spotify. */
   onSend: () => void;
+  onOpenPlaylist: (playlistId: string) => void;
 };
 
 /** « Sur l'enclume » : la pièce forgée, titre par titre, à chaud ou trempé. */
 export function AnvilScreen({
   record,
   reforge,
+  send,
   onToggleQuench,
   onRename,
   onOpenTrack,
   onBack,
   onReforge,
   onSend,
+  onOpenPlaylist,
 }: AnvilScreenProps) {
-  const hot = hotTracks(record).length;
   const quenched = quenchedCount(record);
   const reforging = reforge.status === 'reforging';
+  const busy = reforging || send.status === 'sending';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -62,7 +68,7 @@ export function AnvilScreen({
         <PieceDetails
           title={record.title}
           description={record.description}
-          editable={!reforging}
+          editable={!busy}
           onRename={onRename}
         />
         <View style={styles.legend}>
@@ -99,22 +105,74 @@ export function AnvilScreen({
           ))}
         </View>
       </ScrollView>
-      <View style={styles.footer}>
-        {reforge.status === 'failed' && (
-          <Text style={styles.status} accessibilityRole="alert">
-            {failureText(reforge.failure)}
-          </Text>
-        )}
-        <SecondaryButton
-          label={hot > 0 ? ANVIL_COPY.reforge(hot) : ANVIL_COPY.allQuenched}
-          disabled={hot === 0}
-          loading={reforging}
-          loadingLabel={ANVIL_COPY.reforging}
-          onPress={onReforge}
-        />
-        <PrimaryButton label={ANVIL_COPY.send} disabled={reforging} onPress={onSend} />
-      </View>
+      <AnvilActions
+        record={record}
+        reforge={reforge}
+        send={send}
+        onReforge={onReforge}
+        onSend={onSend}
+        onOpenPlaylist={onOpenPlaylist}
+      />
     </SafeAreaView>
+  );
+}
+
+type AnvilActionsProps = Pick<
+  AnvilScreenProps,
+  'record' | 'reforge' | 'send' | 'onReforge' | 'onSend' | 'onOpenPlaylist'
+>;
+
+/** Pied de l'enclume : reforger, envoyer (ou ouvrir la playlist envoyée), et les échecs. */
+function AnvilActions({
+  record,
+  reforge,
+  send,
+  onReforge,
+  onSend,
+  onOpenPlaylist,
+}: AnvilActionsProps) {
+  const hot = hotTracks(record).length;
+  const reforging = reforge.status === 'reforging';
+  const sending = send.status === 'sending';
+  const playlistId = record.spotifyPlaylistId;
+  const sent = isSentAndUnchanged(record) && playlistId !== null;
+
+  return (
+    <View style={styles.footer}>
+      {reforge.status === 'failed' && (
+        <Text style={styles.status} accessibilityRole="alert">
+          {failureText(reforge.failure)}
+        </Text>
+      )}
+      {send.status === 'failed' && (
+        <Text style={styles.status} accessibilityRole="alert">
+          {sendFailureText(send.failure)}
+        </Text>
+      )}
+      {sent && (
+        <Text color="steel" style={styles.status} accessibilityLiveRegion="polite">
+          {ANVIL_COPY.sent}
+        </Text>
+      )}
+      <SecondaryButton
+        label={hot > 0 ? ANVIL_COPY.reforge(hot) : ANVIL_COPY.allQuenched}
+        disabled={hot === 0 || sending}
+        loading={reforging}
+        loadingLabel={ANVIL_COPY.reforging}
+        onPress={onReforge}
+      />
+      {sent ? (
+        <PrimaryButton label={ANVIL_COPY.openPlaylist} onPress={() => onOpenPlaylist(playlistId)} />
+      ) : (
+        <PrimaryButton
+          label={send.status === 'failed' ? ANVIL_COPY.retrySend : ANVIL_COPY.send}
+          disabled={reforging}
+          loading={sending}
+          loadingLabel={ANVIL_COPY.sending}
+          onPress={onSend}
+        />
+      )}
+    </View>
   );
 }
 

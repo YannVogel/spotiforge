@@ -10,9 +10,11 @@ function ConnectedAnvil(props: {
   onReforge?: () => void;
   onSend?: () => void;
   onOpenTrack?: (uri: string) => void;
+  onOpenPlaylist?: (id: string) => void;
 }) {
   const record = useAnvilStore((state) => state.record);
   const reforge = useAnvilStore((state) => state.reforge);
+  const send = useAnvilStore((state) => state.send);
   const toggleQuench = useAnvilStore((state) => state.toggleQuench);
   const setDetails = useAnvilStore((state) => state.setDetails);
   if (!record) return null;
@@ -20,12 +22,14 @@ function ConnectedAnvil(props: {
     <AnvilScreen
       record={record}
       reforge={reforge}
+      send={send}
       onToggleQuench={toggleQuench}
       onRename={setDetails}
       onOpenTrack={props.onOpenTrack ?? (() => {})}
       onBack={() => {}}
       onReforge={props.onReforge ?? (() => {})}
       onSend={props.onSend ?? (() => {})}
+      onOpenPlaylist={props.onOpenPlaylist ?? (() => {})}
     />
   );
 }
@@ -52,7 +56,7 @@ const record = makePieceRecord({
 });
 
 beforeEach(() => {
-  useAnvilStore.setState({ record, reforge: { status: 'idle' } });
+  useAnvilStore.setState({ record, reforge: { status: 'idle' }, send: { status: 'idle' } });
 });
 
 it('affiche le titre, la description, la légende et chaque titre de la pièce', async () => {
@@ -201,4 +205,60 @@ it('appuyer sur un titre l’ouvre dans Spotify', async () => {
   await fireEvent.press(screen.getByRole('link', { name: 'Écouter Nightcall dans Spotify' }));
 
   expect(onOpenTrack).toHaveBeenCalledWith(record.tracks[1]?.spotifyUri);
+});
+
+describe('envoi', () => {
+  it('pendant l’envoi, le bouton est occupé et la reforge bloquée', async () => {
+    const onReforge = jest.fn();
+    useAnvilStore.setState({ send: { status: 'sending' } });
+    await render(<ConnectedAnvil onReforge={onReforge} />);
+
+    expect(screen.getByRole('button', { name: 'Envoi en cours…' })).toBeBusy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Reforger 2 titres' }));
+    expect(onReforge).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: 'Modifier le titre et la description' }),
+    ).toBeNull();
+  });
+
+  it('après l’envoi, confirme et propose d’ouvrir la playlist', async () => {
+    const onOpenPlaylist = jest.fn();
+    useAnvilStore.setState({
+      record: {
+        ...record,
+        spotifyPlaylistId: 'fakePlaylist1',
+        sentAt: '2026-11-12T12:00:00.000Z',
+        updatedAt: '2026-11-12T12:00:00.000Z',
+      },
+    });
+    await render(<ConnectedAnvil onOpenPlaylist={onOpenPlaylist} />);
+
+    expect(screen.getByText('Pièce envoyée sur Spotify, en playlist privée.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Ouvrir dans Spotify' }));
+    expect(onOpenPlaylist).toHaveBeenCalledWith('fakePlaylist1');
+  });
+
+  it('modifiée après l’envoi, la pièce peut être renvoyée', async () => {
+    useAnvilStore.setState({
+      record: {
+        ...record,
+        spotifyPlaylistId: 'fakePlaylist1',
+        sentAt: '2026-11-12T12:00:00.000Z',
+        updatedAt: '2026-11-12T13:00:00.000Z',
+      },
+    });
+    await render(<ConnectedAnvil />);
+
+    expect(screen.getByRole('button', { name: 'Envoyer sur Spotify' })).toBeOnTheScreen();
+  });
+
+  it('un échec dit quoi faire et propose de réessayer', async () => {
+    const onSend = jest.fn();
+    useAnvilStore.setState({ send: { status: 'failed', failure: 'forbidden' } });
+    await render(<ConnectedAnvil onSend={onSend} />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/pas parmi les cinq comptes autorisés/);
+    await fireEvent.press(screen.getByRole('button', { name: 'Réessayer l’envoi' }));
+    expect(onSend).toHaveBeenCalledTimes(1);
+  });
 });

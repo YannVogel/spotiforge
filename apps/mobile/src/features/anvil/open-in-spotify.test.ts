@@ -1,4 +1,4 @@
-import { openTrack } from './open-track';
+import { openPlaylist, openTrack } from './open-in-spotify';
 
 const uri = 'spotify:track:4uLU6hMCjMI75M1A2tKUQC';
 
@@ -29,4 +29,18 @@ it('renvoie false si rien ne s’ouvre, sans planter', async () => {
   expect(await openTrack(uri, openURL)).toBe(false);
   expect(await openTrack('pas une uri', openURL)).toBe(false);
   jest.restoreAllMocks();
+});
+
+it('ouvre une playlist dans l’app, ou sa page web', async () => {
+  const openURL = jest
+    .fn<Promise<unknown>, [string]>()
+    .mockRejectedValueOnce(new Error('No app'))
+    .mockResolvedValueOnce(true);
+
+  expect(await openPlaylist('3cEYpjA9oz9GiPac4AsH4n', openURL)).toBe(true);
+  expect(openURL.mock.calls.map(([url]) => url)).toEqual([
+    'spotify:playlist:3cEYpjA9oz9GiPac4AsH4n',
+    'https://open.spotify.com/playlist/3cEYpjA9oz9GiPac4AsH4n',
+  ]);
+  expect(await openPlaylist('../x', openURL)).toBe(false);
 });
