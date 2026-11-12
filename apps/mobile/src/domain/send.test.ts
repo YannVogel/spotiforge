@@ -1,4 +1,10 @@
-import { isSentAndUnchanged, PLAYLIST_BATCH_SIZE, sendPiece } from './send';
+import {
+  forgetPlaylist,
+  isSentAndUnchanged,
+  PLAYLIST_BATCH_SIZE,
+  PlaylistMissingError,
+  sendPiece,
+} from './send';
 import { SpotifyError } from './spotify';
 import { makePieceRecord, makePieceTrack } from './test-fixtures';
 
@@ -19,6 +25,9 @@ function fakeSpotify() {
     addPlaylistItems: jest.fn(async (id: string, uris: readonly string[]) => {
       playlists.set(id, [...(playlists.get(id) ?? []), ...uris]);
     }),
+    updatePlaylistDetails: jest.fn(
+      async (_id: string, _details: { name: string; description: string }) => {},
+    ),
   };
   return { spotify, playlists };
 }
@@ -115,4 +124,66 @@ it('isSentAndUnchanged : non envoyée, ou modifiée depuis l’envoi', () => {
       updatedAt: '2026-11-12T11:00:00.000Z',
     }),
   ).toBe(false);
+});
+
+describe('rafraîchir une playlist déjà envoyée', () => {
+  const sentPiece = () => ({
+    ...record(3),
+    spotifyPlaylistId: 'existing',
+    sentAt: '2026-11-11T20:00:00.000Z',
+    updatedAt: '2026-11-12T10:00:00.000Z',
+    title: 'Titre retouché',
+  });
+
+  it('remplace les titres dans la même playlist, trempés à leur place, et met à jour le nom', async () => {
+    const { spotify, playlists } = fakeSpotify();
+    playlists.set('existing', ['spotify:track:ancien']);
+    const piece = sentPiece();
+
+    const refreshed = await sendPiece(piece, { spotify, now: () => NOW });
+
+    expect(playlists.size).toBe(1);
+    expect(playlists.get('existing')).toEqual(piece.tracks.map((t) => t.spotifyUri));
+    expect(spotify.updatePlaylistDetails).toHaveBeenCalledWith('existing', {
+      name: 'Titre retouché',
+      description: piece.description,
+    });
+    expect(refreshed.sentAt).toBe(NOW.toISOString());
+  });
+
+  it('détecte une playlist supprimée côté Spotify', async () => {
+    const { spotify } = fakeSpotify();
+    spotify.replacePlaylistItems.mockRejectedValueOnce(new SpotifyError('unavailable', 404));
+
+    await expect(sendPiece(sentPiece(), { spotify, now: () => NOW })).rejects.toThrow(
+      PlaylistMissingError,
+    );
+    expect(spotify.createPlaylist).not.toHaveBeenCalled();
+  });
+
+  it('recréer : la prochaine écriture crée une nouvelle playlist', async () => {
+    const { spotify, playlists } = fakeSpotify();
+
+    const recreated = await sendPiece(forgetPlaylist(sentPiece()), { spotify, now: () => NOW });
+
+    expect(spotify.createPlaylist).toHaveBeenCalledTimes(1);
+    expect(recreated.spotifyPlaylistId).toBe('fakePlaylist1');
+    expect(playlists.get('fakePlaylist1')).toHaveLength(3);
+    expect(spotify.updatePlaylistDetails).not.toHaveBeenCalled();
+  });
+
+  it('un échec en cours de route laisse une playlist reprenable, sans doublon', async () => {
+    const { spotify, playlists } = fakeSpotify();
+    playlists.set('existing', ['spotify:track:ancien']);
+    spotify.updatePlaylistDetails.mockRejectedValueOnce(new SpotifyError('network'));
+    const piece = sentPiece();
+
+    await expect(sendPiece(piece, { spotify, now: () => NOW })).rejects.toThrow(
+      new SpotifyError('network'),
+    );
+    await sendPiece(piece, { spotify, now: () => NOW });
+
+    expect(playlists.get('existing')).toEqual(piece.tracks.map((t) => t.spotifyUri));
+    expect(spotify.createPlaylist).not.toHaveBeenCalled();
+  });
 });

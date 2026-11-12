@@ -27,6 +27,8 @@ type AnvilScreenProps = {
   /** Écrit la pièce sur le compte Spotify. */
   onSend: () => void;
   onOpenPlaylist: (playlistId: string) => void;
+  /** La playlist a disparu de Spotify : en créer une nouvelle. */
+  onRecreatePlaylist: () => void;
 };
 
 /** « Sur l'enclume » : la pièce forgée, titre par titre, à chaud ou trempé. */
@@ -41,6 +43,7 @@ export function AnvilScreen({
   onReforge,
   onSend,
   onOpenPlaylist,
+  onRecreatePlaylist,
 }: AnvilScreenProps) {
   const quenched = quenchedCount(record);
   const reforging = reforge.status === 'reforging';
@@ -112,6 +115,7 @@ export function AnvilScreen({
         onReforge={onReforge}
         onSend={onSend}
         onOpenPlaylist={onOpenPlaylist}
+        onRecreatePlaylist={onRecreatePlaylist}
       />
     </SafeAreaView>
   );
@@ -119,7 +123,7 @@ export function AnvilScreen({
 
 type AnvilActionsProps = Pick<
   AnvilScreenProps,
-  'record' | 'reforge' | 'send' | 'onReforge' | 'onSend' | 'onOpenPlaylist'
+  'record' | 'reforge' | 'send' | 'onReforge' | 'onSend' | 'onOpenPlaylist' | 'onRecreatePlaylist'
 >;
 
 /** Pied de l'enclume : reforger, envoyer (ou ouvrir la playlist envoyée), et les échecs. */
@@ -130,12 +134,14 @@ function AnvilActions({
   onReforge,
   onSend,
   onOpenPlaylist,
+  onRecreatePlaylist,
 }: AnvilActionsProps) {
   const hot = hotTracks(record).length;
   const reforging = reforge.status === 'reforging';
   const sending = send.status === 'sending';
   const playlistId = record.spotifyPlaylistId;
   const sent = isSentAndUnchanged(record) && playlistId !== null;
+  const playlistMissing = send.status === 'failed' && send.failure === 'playlist_missing';
 
   return (
     <View style={styles.footer}>
@@ -165,11 +171,17 @@ function AnvilActions({
         <PrimaryButton label={ANVIL_COPY.openPlaylist} onPress={() => onOpenPlaylist(playlistId)} />
       ) : (
         <PrimaryButton
-          label={send.status === 'failed' ? ANVIL_COPY.retrySend : ANVIL_COPY.send}
+          label={
+            playlistMissing
+              ? ANVIL_COPY.recreatePlaylist
+              : send.status === 'failed'
+                ? ANVIL_COPY.retrySend
+                : ANVIL_COPY.send
+          }
           disabled={reforging}
           loading={sending}
           loadingLabel={ANVIL_COPY.sending}
-          onPress={onSend}
+          onPress={playlistMissing ? onRecreatePlaylist : onSend}
         />
       )}
     </View>

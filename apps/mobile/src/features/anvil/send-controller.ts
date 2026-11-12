@@ -1,10 +1,13 @@
-import { sendPiece } from '../../domain/send';
+import { forgetPlaylist, sendPiece } from '../../domain/send';
 import type { SpotifyGateway } from '../../domain/spotify';
 import { useAnvilStore } from './anvil-store';
 import { sendFailureOf } from './send-failure';
 
 export type SendDependencies = {
-  spotify: Pick<SpotifyGateway, 'createPlaylist' | 'replacePlaylistItems' | 'addPlaylistItems'>;
+  spotify: Pick<
+    SpotifyGateway,
+    'createPlaylist' | 'replacePlaylistItems' | 'addPlaylistItems' | 'updatePlaylistDetails'
+  >;
   now: () => Date;
 };
 
@@ -41,4 +44,14 @@ export async function startSend(getDependencies: () => Promise<SendDependencies>
     if (!isSamePiece()) return;
     useAnvilStore.setState({ send: { status: 'failed', failure: sendFailureOf(error) } });
   }
+}
+
+/** La playlist a disparu de Spotify et la personne veut la recréer : une nouvelle est créée. */
+export async function recreatePlaylist(
+  getDependencies: () => Promise<SendDependencies>,
+): Promise<void> {
+  const { record, send } = useAnvilStore.getState();
+  if (!record || send.status === 'sending') return;
+  useAnvilStore.setState({ record: forgetPlaylist(record), send: { status: 'idle' } });
+  await startSend(getDependencies);
 }

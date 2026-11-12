@@ -4,7 +4,7 @@ import { AnvilScreen } from '../features/anvil/AnvilScreen';
 import { useAnvilStore } from '../features/anvil/anvil-store';
 import { openPlaylist, openTrack } from '../features/anvil/open-in-spotify';
 import { startReforge } from '../features/anvil/reforge-controller';
-import { startSend } from '../features/anvil/send-controller';
+import { recreatePlaylist, startSend } from '../features/anvil/send-controller';
 import { forgeDependencies, sendDependencies } from '../features/forge/dependencies';
 
 /** « Sur l'enclume » : la pièce qui vient d'être forgée. */
@@ -31,6 +31,7 @@ export default function AnvilRoute() {
       onReforge={() => void startReforge(forgeDependencies)}
       onSend={() => void startSend(sendDependencies)}
       onOpenPlaylist={(id) => void openPlaylist(id)}
+      onRecreatePlaylist={() => void recreatePlaylist(sendDependencies)}
     />
   );
 }

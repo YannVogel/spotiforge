@@ -16,6 +16,7 @@ export const ANVIL_COPY = {
   send: 'Envoyer sur Spotify',
   sending: 'Envoi en cours…',
   retrySend: 'Réessayer l’envoi',
+  recreatePlaylist: 'Recréer la playlist',
   sent: 'Pièce envoyée sur Spotify, en playlist privée.',
   openPlaylist: 'Ouvrir dans Spotify',
   edit: 'Modifier le titre et la description',
