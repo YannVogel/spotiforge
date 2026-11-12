@@ -1,3 +1,4 @@
+import type { CatalogTrack } from './match';
 import type { Account } from './session';
 
 export type SpotifyErrorKind =
@@ -25,4 +26,6 @@ export class SpotifyError extends Error {
 /** Ce dont le domaine a besoin de Spotify. S'enrichit endpoint par endpoint, au fil des issues. */
 export interface SpotifyGateway {
   getCurrentAccount(): Promise<Account>;
+  /** Recherche de titres (10 résultats au plus), dans l'ordre de pertinence de Spotify. */
+  searchTracks(query: { artist: string; title: string }): Promise<CatalogTrack[]>;
 }
