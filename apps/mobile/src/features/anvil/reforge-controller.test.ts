@@ -74,3 +74,15 @@ it('ne pose pas le résultat sur une autre pièce ouverte entre-temps', async ()
 
   expect(useAnvilStore.getState().record).toEqual(other);
 });
+
+it('garde le titre et la description modifiés lors d’une reforge', async () => {
+  const { deps } = reforgeable();
+  useAnvilStore.getState().setDetails('Mon titre', 'Ma description');
+
+  await startReforge(getDeps(deps));
+
+  expect(useAnvilStore.getState().record).toMatchObject({
+    title: 'Mon titre',
+    description: 'Ma description',
+  });
+});

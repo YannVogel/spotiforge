@@ -6,16 +6,23 @@ import { useAnvilStore } from './anvil-store';
 import { AnvilScreen } from './AnvilScreen';
 
 // L'écran branché sur le vrai store, comme dans la route.
-function ConnectedAnvil(props: { onReforge?: () => void; onSend?: () => void }) {
+function ConnectedAnvil(props: {
+  onReforge?: () => void;
+  onSend?: () => void;
+  onOpenTrack?: (uri: string) => void;
+}) {
   const record = useAnvilStore((state) => state.record);
   const reforge = useAnvilStore((state) => state.reforge);
   const toggleQuench = useAnvilStore((state) => state.toggleQuench);
+  const setDetails = useAnvilStore((state) => state.setDetails);
   if (!record) return null;
   return (
     <AnvilScreen
       record={record}
       reforge={reforge}
       onToggleQuench={toggleQuench}
+      onRename={setDetails}
+      onOpenTrack={props.onOpenTrack ?? (() => {})}
       onBack={() => {}}
       onReforge={props.onReforge ?? (() => {})}
       onSend={props.onSend ?? (() => {})}
@@ -148,4 +155,50 @@ it('après un échec de reforge, dit ce qui se passe et laisse réessayer', asyn
   expect(screen.getByText('Tick of the Clock')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Reforger 2 titres' }));
   expect(onReforge).toHaveBeenCalledTimes(1);
+});
+
+describe('titre et description', () => {
+  const edit = () =>
+    fireEvent.press(screen.getByRole('button', { name: 'Modifier le titre et la description' }));
+
+  it('se modifient à la main, nettoyés', async () => {
+    await render(<ConnectedAnvil />);
+
+    await edit();
+    await fireEvent.changeText(screen.getByLabelText('Titre de la playlist'), '  Nuit   blanche ');
+    await fireEvent.changeText(screen.getByLabelText('Description'), 'Ma description.');
+    await fireEvent.press(screen.getByRole('button', { name: 'Terminer' }));
+
+    expect(screen.getByRole('header', { name: 'Nuit blanche' })).toBeOnTheScreen();
+    expect(screen.getByText('Ma description.')).toBeOnTheScreen();
+    expect(useAnvilStore.getState().record?.title).toBe('Nuit blanche');
+  });
+
+  it('un titre vidé garde l’ancien', async () => {
+    await render(<ConnectedAnvil />);
+
+    await edit();
+    await fireEvent.changeText(screen.getByLabelText('Titre de la playlist'), '   ');
+    await fireEvent.press(screen.getByRole('button', { name: 'Terminer' }));
+
+    expect(screen.getByRole('header', { name: 'Bord de mer, 2 h du matin' })).toBeOnTheScreen();
+  });
+
+  it('ne se modifient pas pendant une reforge', async () => {
+    useAnvilStore.setState({ reforge: { status: 'reforging' } });
+    await render(<ConnectedAnvil />);
+
+    expect(
+      screen.queryByRole('button', { name: 'Modifier le titre et la description' }),
+    ).toBeNull();
+  });
+});
+
+it('appuyer sur un titre l’ouvre dans Spotify', async () => {
+  const onOpenTrack = jest.fn();
+  await render(<ConnectedAnvil onOpenTrack={onOpenTrack} />);
+
+  await fireEvent.press(screen.getByRole('link', { name: 'Écouter Nightcall dans Spotify' }));
+
+  expect(onOpenTrack).toHaveBeenCalledWith(record.tracks[1]?.spotifyUri);
 });

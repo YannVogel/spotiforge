@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import type { PieceRecord } from '../../domain/history';
 import * as rules from '../../domain/piece';
+import { cleanPieceDescription, cleanPieceTitle } from '../../domain/piece-text';
 import type { ForgeFailure } from '../forge/failure';
 
 export type ReforgeState =
@@ -17,6 +18,8 @@ type AnvilStore = {
   reforge: ReforgeState;
   open: (record: PieceRecord) => void;
   toggleQuench: (spotifyUri: string) => void;
+  /** Titre et description modifiés à la main ; un titre vide garde l'ancien. */
+  setDetails: (title: string, description: string) => void;
   close: () => void;
 };
 
@@ -30,6 +33,18 @@ export const useAnvilStore = create<AnvilStore>()((set) => ({
     set(({ record, reforge }) =>
       record && reforge.status !== 'reforging'
         ? { record: withPiece(record, rules.toggleQuench(record, spotifyUri)) }
+        : {},
+    ),
+  setDetails: (title, description) =>
+    set(({ record }) =>
+      record
+        ? {
+            record: {
+              ...record,
+              title: cleanPieceTitle(title) ?? record.title,
+              description: cleanPieceDescription(description),
+            },
+          }
         : {},
     ),
   close: () => set({ record: null, reforge: { status: 'idle' } }),

@@ -1,9 +1,11 @@
+import { FORGE_LIMITS } from '@spotiforge/shared';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PieceRecord } from '../../domain/history';
 import { hotTracks, quenchedCount } from '../../domain/piece';
-import { HeroTitle, PrimaryButton, SecondaryButton, Text, TrackRow } from '../../ui';
+import { HeroTitle, OreField, PrimaryButton, SecondaryButton, Text, TrackRow } from '../../ui';
 import { borderWidth, colors, gradients, size, space } from '../../ui/theme';
 import { failureText } from '../forge/copy';
 import type { ReforgeState } from './anvil-store';
@@ -13,6 +15,9 @@ type AnvilScreenProps = {
   record: PieceRecord;
   reforge: ReforgeState;
   onToggleQuench: (spotifyUri: string) => void;
+  onRename: (title: string, description: string) => void;
+  /** Écouter un titre (ouverture dans Spotify). */
+  onOpenTrack: (spotifyUri: string) => void;
   onBack: () => void;
   /** Remplace les titres à chaud (#37). */
   onReforge: () => void;
@@ -25,6 +30,8 @@ export function AnvilScreen({
   record,
   reforge,
   onToggleQuench,
+  onRename,
+  onOpenTrack,
   onBack,
   onReforge,
   onSend,
@@ -52,8 +59,12 @@ export function AnvilScreen({
             {ANVIL_COPY.heading.toUpperCase()}
           </Text>
         </View>
-        <HeroTitle variant="title">{record.title}</HeroTitle>
-        <Text color="textSoft">{record.description}</Text>
+        <PieceDetails
+          title={record.title}
+          description={record.description}
+          editable={!reforging}
+          onRename={onRename}
+        />
         <View style={styles.legend}>
           <Text variant="meta" color="textSoft" style={styles.legendText}>
             <Text variant="meta" color="flame">
@@ -82,6 +93,8 @@ export function AnvilScreen({
               pending={reforging && !track.quenched}
               disabled={reforging}
               onToggleQuench={() => onToggleQuench(track.spotifyUri)}
+              onPress={() => onOpenTrack(track.spotifyUri)}
+              pressLabel={ANVIL_COPY.listen(track.title)}
             />
           ))}
         </View>
@@ -102,6 +115,69 @@ export function AnvilScreen({
         <PrimaryButton label={ANVIL_COPY.send} disabled={reforging} onPress={onSend} />
       </View>
     </SafeAreaView>
+  );
+}
+
+type PieceDetailsProps = {
+  title: string;
+  description: string;
+  editable: boolean;
+  onRename: (title: string, description: string) => void;
+};
+
+/** Titre et description de la pièce, écrits par l'IA, modifiables à la main. */
+function PieceDetails({ title, description, editable, onRename }: PieceDetailsProps) {
+  const [draft, setDraft] = useState<{ title: string; description: string } | null>(null);
+
+  if (!draft) {
+    return (
+      <>
+        <HeroTitle variant="title">{title}</HeroTitle>
+        <Text color="textSoft">{description}</Text>
+        {editable && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setDraft({ title, description })}
+            style={styles.link}
+          >
+            <Text variant="label" color="textSoft">
+              {ANVIL_COPY.edit}
+            </Text>
+          </Pressable>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <View style={styles.editor}>
+      <OreField
+        label={ANVIL_COPY.titleField}
+        value={draft.title}
+        onChangeText={(value) => setDraft({ ...draft, title: value })}
+        maxLength={FORGE_LIMITS.title.maxLength}
+        lines={2}
+      />
+      <OreField
+        label={ANVIL_COPY.descriptionField}
+        value={draft.description}
+        onChangeText={(value) => setDraft({ ...draft, description: value })}
+        maxLength={FORGE_LIMITS.description.maxLength}
+        lines={3}
+      />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          onRename(draft.title, draft.description);
+          setDraft(null);
+        }}
+        style={styles.link}
+      >
+        <Text variant="label" color="flame">
+          {ANVIL_COPY.editDone}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -150,6 +226,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   legendText: { flex: 1 },
+  link: { minHeight: size.touchMin, justifyContent: 'center', alignSelf: 'flex-start' },
+  editor: { gap: space.md },
   list: { gap: space.sm },
   footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md, gap: space.md },
   status: { textAlign: 'center' },
