@@ -2,6 +2,8 @@ import { APP_NAME, type HealthResponse } from '@spotiforge/shared';
 
 import { type AuthResult, createAuthenticator, type IdentityCache } from './auth';
 import { parseWorkerConfig } from './config';
+import { createForgeGenerator } from './forge/generate';
+import { handleForge } from './forge/handler';
 
 // Cache d'identités partagé par les requêtes d'un même isolat : uniquement des données simples
 // (empreinte du jeton → identifiant de compte, date d'expiration), jamais d'objet de requête.
@@ -36,6 +38,14 @@ export default {
     // Toute autre route exige un compte Spotify autorisé.
     const auth = await authenticate(request, config.allowedSpotifyIds);
     if (!auth.ok) return authError(auth);
+
+    if (request.method === 'POST' && url.pathname === '/forge') {
+      const generate = createForgeGenerator({
+        apiKey: config.anthropicApiKey,
+        model: config.claudeModel,
+      });
+      return handleForge(request, generate);
+    }
 
     return Response.json({ error: 'not_found' }, { status: 404 });
   },
