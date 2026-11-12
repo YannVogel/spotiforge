@@ -50,6 +50,24 @@ export default defineConfig([
     },
   },
   {
+    // docs/SPOTIFY_API.md : un seul module parle à Spotify, `infra/spotify`.
+    files: ['apps/mobile/src/**/*.{ts,tsx}'],
+    ignores: ['apps/mobile/src/infra/spotify/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/api\\.spotify\\.com/]',
+          message: 'Seul infra/spotify appelle l’API Spotify : passe par SpotifyGateway.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/api\\.spotify\\.com/]',
+          message: 'Seul infra/spotify appelle l’API Spotify : passe par SpotifyGateway.',
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/mobile/src/domain/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': ['error', domainBoundaries],
