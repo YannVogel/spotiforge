@@ -131,6 +131,17 @@ export function hotTracks(piece: Piece): PieceTrack[] {
   return piece.tracks.filter((track) => !track.quenched);
 }
 
+export function quenchedCount(piece: Piece): number {
+  return piece.tracks.length - hotTracks(piece).length;
+}
+
+/** Bascule un titre : trempé s'il était à chaud, remis au feu s'il était trempé. */
+export function toggleQuench(piece: Piece, spotifyUri: string): Piece {
+  const track = piece.tracks.find((t) => t.spotifyUri === spotifyUri);
+  if (!track) return piece;
+  return track.quenched ? unquench(piece, spotifyUri) : quench(piece, spotifyUri);
+}
+
 /** Refusés après la reforge : les anciens, plus les titres à chaud qui vont être remplacés. */
 function rejectHotTracks(piece: Piece): RejectedTrack[] {
   const replaced = hotTracks(piece).map(({ spotifyUri, artist, title }) => ({

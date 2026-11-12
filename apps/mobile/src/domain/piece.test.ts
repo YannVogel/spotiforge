@@ -7,6 +7,8 @@ import {
   type Piece,
   prepareReforge,
   quench,
+  quenchedCount,
+  toggleQuench,
   unquench,
 } from './piece';
 import { makePieceTrack, makeResolvedTrack } from './test-fixtures';
@@ -232,5 +234,24 @@ describe('applyReforge', () => {
 
     // 4 min par titre : 6 titres pour 24 min.
     expect(uris(reforged).map(n)).toEqual([10, 2, 11, 4, 12, 13]);
+  });
+});
+
+describe('toggleQuench et quenchedCount', () => {
+  const piece: Piece = {
+    tracks: [makePieceTrack(1), makePieceTrack(2, { quenched: true })],
+    rejected: [],
+  };
+
+  it('trempe un titre à chaud et remet au feu un titre trempé', () => {
+    const toggled = toggleQuench(toggleQuench(piece, 'spotify:track:fake1'), 'spotify:track:fake2');
+
+    expect(toggled.tracks.map((track) => track.quenched)).toEqual([true, false]);
+    expect(quenchedCount(piece)).toBe(1);
+    expect(quenchedCount(toggled)).toBe(1);
+  });
+
+  it('ignore un titre absent de la pièce', () => {
+    expect(toggleQuench(piece, 'spotify:track:absent')).toBe(piece);
   });
 });

@@ -64,6 +64,8 @@ Les deux polices sont embarquées dans l'app. Pas de chargement réseau.
 
 `TrackRow` à chaud : fond `surfaceHot`, bordure `borderHot`, lueur intérieure, numéro `flame` lumineux. Trempé : fond `surfaceCold`, bordure `borderCold`, aucune lueur, numéro `steel`.
 
+L'écran « Sur l'enclume » porte en haut la lueur `anvilGlow`, pendant de `forgeGlow` (le foyer en bas de l'écran Création). Le bouton de reforge annonce le nombre de titres à chaud (« Reforger 5 titres ») et devient « Tout est trempé », désactivé, quand il n'y en a plus.
+
 ## Mouvement
 
 - **Tremper** : le titre passe du chaud au froid en 300 ms environ, la lueur s'éteint. Retour haptique léger.

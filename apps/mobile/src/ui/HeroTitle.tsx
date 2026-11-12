@@ -14,16 +14,18 @@ const MaskedView = NativeMaskedView as unknown as ComponentType<
 type HeroTitleProps = {
   /** Texte du titre ; `\n` force un retour à la ligne. Un seul `HeroTitle` par écran. */
   children: string;
+  /** `hero` (Création) ou `title`, un cran plus petit, pour un titre écrit par l'IA (enclume). */
+  variant?: 'hero' | 'title';
 };
 
 /** Grand titre d'écran, rempli par le dégradé `heading`. */
-export function HeroTitle({ children }: HeroTitleProps) {
+export function HeroTitle({ children, variant = 'hero' }: HeroTitleProps) {
   return (
     <View accessible accessibilityRole="header" accessibilityLabel={children.replace(/\n/g, ' ')}>
-      <MaskedView maskElement={<Text variant="hero">{children}</Text>}>
+      <MaskedView maskElement={<Text variant={variant}>{children}</Text>}>
         {/* Le texte invisible donne sa taille au dégradé, que le masque découpe en lettres. */}
         <View style={styles.gradient}>
-          <Text variant="hero" style={styles.invisible}>
+          <Text variant={variant} style={styles.invisible}>
             {children}
           </Text>
         </View>
