@@ -13,6 +13,7 @@ import { canForge, toForgeRequest } from '../../domain/draft';
 import { AlloySwitch, HeroTitle, OreField, PrimaryButton, Text, Wordmark } from '../../ui';
 import { colors, gradients, size, space } from '../../ui/theme';
 import { useDraftStore } from '../draft/draft-store';
+import { useAlloyStore } from '../taste/taste-store';
 import { CREATE_COPY } from './copy';
 import { DecadeChoices, DiscoverySetting, LengthSetting, ShapeChoices } from './settings';
 
@@ -26,6 +27,7 @@ type CreateScreenProps = {
 export function CreateScreen({ onForge, onOpenPieces }: CreateScreenProps) {
   const store = useDraftStore();
   const { draft } = store;
+  const alloyUnavailable = useAlloyStore((state) => state.availability === 'unavailable');
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -55,11 +57,19 @@ export function CreateScreen({ onForge, onOpenPieces }: CreateScreenProps) {
             onChangeText={store.setPrompt}
             maxLength={FORGE_LIMITS.prompt.maxLength}
           />
-          <AlloySwitch
-            label={CREATE_COPY.alloy}
-            value={draft.settings.useTaste}
-            onValueChange={store.setUseTaste}
-          />
+          <View style={styles.alloy}>
+            <AlloySwitch
+              label={CREATE_COPY.alloy}
+              value={draft.settings.useTaste && !alloyUnavailable}
+              onValueChange={store.setUseTaste}
+              disabled={alloyUnavailable}
+            />
+            {alloyUnavailable && (
+              <Text variant="meta" color="textMuted">
+                {CREATE_COPY.alloyUnavailable}
+              </Text>
+            )}
+          </View>
           <LengthSetting length={draft.settings.length} onChange={store.setLengthValue} />
           <DiscoverySetting discovery={draft.settings.discovery} onChange={store.setDiscovery} />
           <DecadeChoices selected={draft.settings.decades} onToggle={store.toggleDecade} />
@@ -87,6 +97,7 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  alloy: { gap: space.xs },
   piecesLink: { minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center' },
   footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md },
   forgeGlow: {

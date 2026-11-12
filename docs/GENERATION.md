@@ -24,6 +24,16 @@ Envoyée par l'app au Worker (`POST /forge`).
 
 `taste` ne contient que des noms d'artistes et de genres. Aucun identifiant de compte, aucun horodatage d'écoute.
 
+### Résumé des écoutes
+
+Construit par l'app (`domain/taste.ts`) à partir de deux lectures Spotify :
+
+- `topArtists` : les 50 artistes les plus écoutés sur environ six mois (`GET /me/top/artists`, `time_range=medium_term`), dans l'ordre de Spotify ;
+- `recentArtists` : les artistes des 50 dernières écoutes (`GET /me/player/recently-played`), de la plus récente à la plus ancienne ;
+- `genres` : les genres des artistes les plus écoutés, du plus fréquent au moins fréquent.
+
+Noms nettoyés (espaces), sans doublon à la normalisation près, coupés aux bornes du contrat. Le résumé est gardé sur le téléphone, par compte, et relu au plus une fois par jour. Il est lu à chaque forge, même sans alliage, parce qu'il sert aussi à marquer les titres « connus ». Si Spotify ne donne aucune des deux lectures, l'app reprend un ancien résumé s'il existe ; sinon l'alliage est désactivé avec un message et la forge part sans `taste`. Une seule des deux lectures suffit.
+
 ## Réponse : `ForgeResponse`
 
 | Champ | Type | Rôle |

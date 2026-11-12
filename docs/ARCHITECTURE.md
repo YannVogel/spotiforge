@@ -128,6 +128,8 @@ SQLite sur le téléphone (`expo-sqlite`), fichier `spotiforge.db`. Le schéma e
 
 **`molds`** : moules, c'est-à-dire modèles réutilisables (`id`, `owner_spotify_id`, `name`, `prompt`, `settings` en JSON, `created_at`).
 
+**`taste_cache`** : résumé des écoutes (« Alliage : mes écoutes »), une ligne par compte : `owner_spotify_id`, `taste` (JSON au format `Taste` du contrat : noms d'artistes et de genres seulement), `fetched_at`. Relu sur Spotify au plus une fois par jour.
+
 **`track_cache`** : résolutions déjà faites. `query_key` (artiste et titre normalisés), `spotify_uri` (vide : titre introuvable), métadonnées `title`, `artists` (JSON), `year`, `duration_ms`, et `resolved_at`.
 
 Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.

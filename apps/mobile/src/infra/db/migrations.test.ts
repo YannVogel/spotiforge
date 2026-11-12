@@ -14,13 +14,20 @@ async function versionOf(db: SqlDatabase) {
     ?.user_version;
 }
 
-it('crée les cinq tables sur une base neuve et note la version', async () => {
+it('crée les six tables sur une base neuve et note la version', async () => {
   const db = createMemoryDatabase();
 
   await migrate(db);
 
   const tables = (await schemaOf(db)).filter((entry) => entry.type === 'table').map((t) => t.name);
-  expect(tables).toEqual(['molds', 'piece_tracks', 'pieces', 'rejected_tracks', 'track_cache']);
+  expect(tables).toEqual([
+    'molds',
+    'piece_tracks',
+    'pieces',
+    'rejected_tracks',
+    'taste_cache',
+    'track_cache',
+  ]);
   expect(await versionOf(db)).toBe(SCHEMA_VERSION);
 });
 

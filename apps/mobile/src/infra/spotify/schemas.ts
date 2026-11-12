@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { CatalogTrack } from '../../domain/match';
 import type { Account } from '../../domain/session';
+import type { ListenedArtist } from '../../domain/taste';
 
 // Schémas tolérants : seuls les champs utilisés sont exigés ; les champs retirés par Spotify
 // (docs/SPOTIFY_API.md) ou ajoutés plus tard ne cassent rien.
@@ -50,4 +51,38 @@ export function toCatalogTracks(search: z.output<typeof searchTracksSchema>): Ca
       },
     ];
   });
+}
+
+/** Page d'éléments validés un par un : un élément incomplet (ou `null`) est ignoré, pas la page. */
+export const itemsPageSchema = z.object({ items: z.array(z.unknown()) });
+
+function parseEach<T extends z.ZodType>(items: readonly unknown[], schema: T): z.output<T>[] {
+  return items.flatMap((item) => {
+    const parsed = schema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+// `genres` n'est pas dans la liste des champs retirés en 2026, mais rien ne garantit sa présence.
+const topArtistSchema = z.object({
+  name: z.string().min(1),
+  genres: z.array(z.string()).nullish(),
+});
+
+export function toListenedArtists(page: z.output<typeof itemsPageSchema>): ListenedArtist[] {
+  return parseEach(page.items, topArtistSchema).map((artist) => ({
+    name: artist.name,
+    genres: artist.genres ?? [],
+  }));
+}
+
+// Seuls les noms d'artistes sont lus : ni l'heure d'écoute (`played_at`), ni le contexte.
+const recentlyPlayedItemSchema = z.object({
+  track: z.object({ artists: z.array(z.object({ name: z.string().min(1) })) }),
+});
+
+export function toRecentArtistNames(page: z.output<typeof itemsPageSchema>): string[] {
+  return parseEach(page.items, recentlyPlayedItemSchema).flatMap(({ track }) =>
+    track.artists.map((artist) => artist.name),
+  );
 }
