@@ -28,6 +28,8 @@ cp apps/worker/.dev.vars.example apps/worker/.dev.vars
 | `apps/worker/.dev.vars` | `ALLOWED_SPOTIFY_IDS` | Secret : comptes Spotify autorisés, séparés par des virgules |
 | `apps/worker/wrangler.jsonc` | `CLAUDE_MODEL` | Variable non secrète : modèle Claude utilisé |
 
+URI de redirection à déclarer dans le dashboard Spotify (connexion en PKCE) : `spotiforge://callback` pour un build, y compris de développement ; dans Expo Go, `exp://<adresse IP de l'ordinateur>:8081/--/callback` (elle change avec l'adresse IP).
+
 Les variables `EXPO_PUBLIC_*` sont intégrées au bundle de l'app : elles ne doivent contenir aucun secret. En production, les secrets du Worker se posent avec `pnpm --filter @spotiforge/worker exec wrangler secret put <NOM>`.
 
 Une valeur manquante ou invalide est signalée par son nom : l'app s'arrête au démarrage avec une `AppConfigError`, le Worker répond `500 misconfigured` et journalise le nom de la variable (jamais sa valeur).
