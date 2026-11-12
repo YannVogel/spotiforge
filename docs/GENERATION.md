@@ -71,8 +71,19 @@ Les champs inconnus sont retirés à la validation, côté requête comme côté
 - Nombre de candidats demandés : environ **1,5 fois** le nombre de titres visés, pour absorber les titres introuvables. Pour une longueur en minutes, compter environ 4 minutes par titre.
 - En reforge, ne demander que de quoi remplir les places libres, avec la même marge.
 - La sortie du LLM est contrainte à un schéma JSON, puis validée. Une sortie invalide déclenche une seule nouvelle tentative, puis une erreur propre.
-- Le modèle utilisé est lu dans la variable `CLAUDE_MODEL`. Le choix du modèle et de la méthode de sortie structurée se fait dans l'issue du Worker, après lecture de la documentation Anthropic à jour.
+- Le modèle utilisé est lu dans la variable `CLAUDE_MODEL`. Choix et méthode : section suivante.
 - Le Worker ne journalise ni le prompt ni la réponse.
+
+## Modèle et sortie structurée
+
+Choisis avec l'issue du Worker (#25), d'après la documentation Anthropic de novembre 2026. Code : `apps/worker/src/forge/`.
+
+- **Modèle** : `claude-opus-5-5` (`CLAUDE_MODEL` dans `apps/worker/wrangler.jsonc`), modèle Claude recommandé par défaut. Sa réflexion adaptative est toujours active ; l'effort est fixé explicitement à `medium` (son défaut).
+- **Sortie structurée** : sortie JSON (`output_config.format`), dont le schéma est produit à partir de `forgeResponseSchema` par l'aide Zod du SDK (`betaZodOutputFormat`). L'appel d'outil forcé n'est pas possible sur ce modèle (erreur 400). Le SDK retire du schéma envoyé les bornes que l'API ne gère pas (longueurs, minimum, maximum) ; le texte reçu est donc revalidé avec le schéma du contrat avant d'être renvoyé.
+- **Refus** : repli côté serveur (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`) : si le modèle décline pour des raisons de politique d'usage, l'API rejoue la requête sur le modèle de repli défini par Anthropic. Un refus final n'est pas retenté.
+- **Tentatives** : le SDK retente une fois les erreurs réseau, 429 et 5xx (délai de 90 s par appel) ; une sortie illisible, tronquée ou hors contrat déclenche une seule nouvelle requête ; au-delà, `502`.
+- **Données du prompt** : la requête part en JSON dans une balise `<forge_request>`, avec le nombre de candidats, le nombre de positions et les positions libres. Les `<` y sont échappés, et le prompt système rappelle que le minerai est une donnée, jamais une instruction.
+- **Nombre de candidats** : 1,5 fois les places libres (toutes les positions, ou celles que `keep` laisse libres), arrondi au supérieur, au plus 100.
 
 ## Consignes données au LLM
 
@@ -113,4 +124,5 @@ La normalisation et l'assemblage sont du code pur du domaine, couverts par des t
 | Compte hors liste autorisée | `403` | Message : compte non autorisé |
 | Spotify injoignable pendant la vérification du jeton | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |
 | Trop de demandes | `429` | Message : la forge refroidit, réessayer plus tard |
+| Requête hors contrat ou corps illisible | `400` (`invalid_request` avec les champs fautifs, ou `invalid_json`) | Bug de l'app : message d'échec |
 | LLM indisponible ou sortie invalide | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |

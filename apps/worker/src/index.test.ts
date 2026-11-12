@@ -1,6 +1,9 @@
 import type { HealthResponse } from '@spotiforge/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { makeForgeRequest, makeForgeResponse } from '@spotiforge/shared/testing';
+
+import { messageReply } from './forge/fake-anthropic';
 import worker from './index';
 
 const validEnv = {
@@ -99,5 +102,49 @@ describe('configuration invalide', () => {
       'Invalid worker configuration: ANTHROPIC_API_KEY is missing',
     );
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain('fake-account-1');
+  });
+});
+
+describe('POST /forge', () => {
+  const body = JSON.stringify(makeForgeRequest());
+
+  it('exige un compte autorisé avant de lire la requête', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await worker.fetch(
+      new Request('http://localhost/forge', { method: 'POST', body }),
+      validEnv,
+    );
+
+    expect(response.status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('renvoie une ForgeResponse pour un compte autorisé (Spotify et Claude simulés)', async () => {
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const url = new Request(input).url;
+      if (url.startsWith('https://api.spotify.com/v1/me')) {
+        return Response.json({ id: 'fake-account-1' });
+      }
+      if (url.startsWith('https://api.anthropic.com/v1/messages')) {
+        return messageReply(JSON.stringify(makeForgeResponse()));
+      }
+      throw new Error(`Unexpected request to ${url}`);
+    });
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await worker.fetch(
+      new Request('http://localhost/forge', {
+        method: 'POST',
+        body,
+        headers: { Authorization: 'Bearer token-forge' },
+      }),
+      validEnv,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(makeForgeResponse());
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
