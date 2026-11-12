@@ -9,12 +9,18 @@ const validEnv = {
   CLAUDE_MODEL: 'fake-model',
 } satisfies Env;
 
-function call(method: string, path: string, env: Env = validEnv): Promise<Response> {
-  return worker.fetch(new Request(`http://localhost${path}`, { method }), env);
+function call(
+  method: string,
+  path: string,
+  env: Env = validEnv,
+  headers: HeadersInit = {},
+): Promise<Response> {
+  return worker.fetch(new Request(`http://localhost${path}`, { method, headers }), env);
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('GET /health', () => {
@@ -25,17 +31,60 @@ describe('GET /health', () => {
     expect(await response.json()).toEqual<HealthResponse>({ status: 'ok', app: 'Spotiforge' });
   });
 
-  it('répond 404 sur une autre méthode', async () => {
+  it('ne répond qu’en GET : une autre méthode est une route protégée', async () => {
     const response = await call('POST', '/health');
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('routes protégées', () => {
+  it('répondent 401 sans jeton, sans appeler Spotify', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+
+    const response = await call('GET', '/inconnue');
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('WWW-Authenticate')).toBe('Bearer');
+    expect(await response.json()).toEqual({ error: 'unauthorized' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('répondent 403 à un compte hors liste', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ id: 'fake-account-other' })),
+    );
+
+    const response = await call('GET', '/inconnue', validEnv, {
+      Authorization: 'Bearer token-other',
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'forbidden' });
+  });
+
+  it('laissent passer un compte autorisé (404 : la route n’existe pas encore)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ id: 'fake-account-1' })),
+    );
+
+    const response = await call('GET', '/inconnue', validEnv, {
+      Authorization: 'Bearer token-allowed',
+    });
 
     expect(response.status).toBe(404);
   });
 });
 
-it('répond 404 sur une route inconnue', async () => {
-  const response = await call('GET', '/inconnue');
+it('ne demande pas de jeton pour /health', async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal('fetch', fetch);
 
-  expect(response.status).toBe(404);
+  expect((await call('GET', '/health')).status).toBe(200);
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 describe('configuration invalide', () => {

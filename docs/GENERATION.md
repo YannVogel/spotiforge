@@ -111,5 +111,6 @@ La normalisation et l'assemblage sont du code pur du domaine, couverts par des t
 |---|---|---|
 | Jeton Spotify absent ou invalide | `401` | Rafraîchir le jeton, rejouer une fois |
 | Compte hors liste autorisée | `403` | Message : compte non autorisé |
+| Spotify injoignable pendant la vérification du jeton | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |
 | Trop de demandes | `429` | Message : la forge refroidit, réessayer plus tard |
 | LLM indisponible ou sortie invalide | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |
