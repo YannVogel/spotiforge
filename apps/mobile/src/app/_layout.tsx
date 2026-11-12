@@ -3,6 +3,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { getAppServices } from '../features/app/services';
+import { startPiecePersistence } from '../features/pieces/persistence';
 import { getAppConfig } from '../infra/config';
 import { colors, useThemeFonts } from '../ui/theme';
 
@@ -20,6 +22,26 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // Chaque changement de la pièce sur l'enclume est enregistré sur le téléphone.
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let unmounted = false;
+    getAppServices()
+      .then(({ pieces }) => {
+        if (!unmounted) stop = startPiecePersistence(pieces).stop;
+      })
+      .catch((error: unknown) =>
+        console.error(
+          'Local pieces could not be opened',
+          error instanceof Error ? error.name : 'unknown',
+        ),
+      );
+    return () => {
+      unmounted = true;
+      stop?.();
+    };
+  }, []);
 
   if (!ready) return null;
 

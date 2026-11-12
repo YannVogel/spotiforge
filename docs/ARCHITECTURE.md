@@ -140,6 +140,8 @@ SQLite sur le téléphone (`expo-sqlite`), fichier `spotiforge.db`. Le schéma e
 
 **`track_cache`** : résolutions déjà faites. `query_key` (artiste et titre normalisés), `spotify_uri` (vide : titre introuvable), métadonnées `title`, `artists` (JSON), `year`, `duration_ms`, et `resolved_at`.
 
+La pièce sur l'enclume est enregistrée à chacun de ses changements (première forge, trempe, reforge et refusés, édition, création de la playlist, envoi), une écriture à la fois (`features/pieces/persistence.ts`). Au lancement, l'écran Création propose de reprendre la dernière pièce non envoyée ; revenu de l'enclume, il propose d'y retourner (`features/pieces/resume.ts`).
+
 Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
 
 ## Erreurs à traiter dès la conception

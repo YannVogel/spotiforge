@@ -5,6 +5,8 @@ import type { PieceRecord } from '../domain/history';
 import { useAnvilStore } from '../features/anvil/anvil-store';
 import { CreateScreen } from '../features/create/CreateScreen';
 import { useForge } from '../features/forge/use-forge';
+import { useResumeStore } from '../features/pieces/resume-store';
+import { useResume } from '../features/pieces/use-resume';
 
 /** Premier écran : la création. Une forge réussie pose la pièce sur l'enclume. */
 export default function CreateRoute() {
@@ -12,15 +14,22 @@ export default function CreateRoute() {
   const onForged = useCallback(
     (record: PieceRecord) => {
       useAnvilStore.getState().open(record);
+      // Une nouvelle pièce : la proposition de reprise vaut de nouveau pour elle.
+      useResumeStore.setState({ dismissed: false });
       router.push('/anvil');
     },
     [router],
   );
   const forge = useForge(onForged);
+  const openAnvil = useCallback(() => router.push('/anvil'), [router]);
+  const resume = useResume(openAnvil);
 
   return (
     <CreateScreen
       forge={forge.state}
+      resume={resume.offer}
+      onResume={resume.resume}
+      onDismissResume={resume.dismiss}
       onForge={forge.start}
       onCancelForge={forge.cancel}
       // Branché par l'écran « Mes pièces » (#43).

@@ -26,10 +26,15 @@ import { FORGE_COPY, failureText, progressText } from '../forge/copy';
 import type { ForgeState } from '../forge/forge-store';
 import { useAlloyStore } from '../taste/taste-store';
 import { CREATE_COPY } from './copy';
+import { ResumeOffer } from './ResumeOffer';
 import { DecadeChoices, DiscoverySetting, LengthSetting, ShapeChoices } from './settings';
 
 type CreateScreenProps = {
   forge: ForgeState;
+  /** Pièce à reprendre sur l'enclume, s'il y en a une. */
+  resume: { title: string } | null;
+  onResume: () => void;
+  onDismissResume: () => void;
   /** Lance la forge depuis le brouillon (ou la relance après un échec). */
   onForge: () => void;
   onCancelForge: () => void;
@@ -37,7 +42,15 @@ type CreateScreenProps = {
 };
 
 /** « Qu'est-ce qu'on forge ? » : le minerai et les réglages, branchés sur le brouillon. */
-export function CreateScreen({ forge, onForge, onCancelForge, onOpenPieces }: CreateScreenProps) {
+export function CreateScreen({
+  forge,
+  resume,
+  onResume,
+  onDismissResume,
+  onForge,
+  onCancelForge,
+  onOpenPieces,
+}: CreateScreenProps) {
   const store = useDraftStore();
   const { draft } = store;
   const alloyUnavailable = useAlloyStore((state) => state.availability === 'unavailable');
@@ -62,6 +75,9 @@ export function CreateScreen({ forge, onForge, onCancelForge, onOpenPieces }: Cr
               </Text>
             </Pressable>
           </View>
+          {resume && forge.status !== 'forging' && (
+            <ResumeOffer title={resume.title} onResume={onResume} onDismiss={onDismissResume} />
+          )}
           <HeroTitle>{CREATE_COPY.hero}</HeroTitle>
           <OreField
             label={CREATE_COPY.ore}
