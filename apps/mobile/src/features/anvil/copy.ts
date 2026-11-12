@@ -12,5 +12,6 @@ export const ANVIL_COPY = {
     `${artist} · ${year} · ${known ? 'connu' : 'découverte'}`,
   reforge: (hot: number) => `Reforger ${hot} ${hot > 1 ? 'titres' : 'titre'}`,
   allQuenched: 'Tout est trempé',
+  reforging: 'Reforge en cours…',
   send: 'Envoyer sur Spotify',
 } as const;

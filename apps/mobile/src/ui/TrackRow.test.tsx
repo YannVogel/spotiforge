@@ -75,3 +75,23 @@ describe('TrackRow', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 });
+
+it('TrackRow en attente (reforge) : bouton figé et état occupé', async () => {
+  const onToggleQuench = jest.fn();
+  await render(
+    <TrackRow
+      number={1}
+      title="Nightcall"
+      meta="Kavinsky · 2010 · connu"
+      reason="Raison"
+      quenched={false}
+      pending
+      onToggleQuench={onToggleQuench}
+    />,
+  );
+
+  const button = screen.getByRole('button', { name: 'Tremper Nightcall' });
+  await fireEvent.press(button);
+  expect(onToggleQuench).not.toHaveBeenCalled();
+  expect(button).toBeDisabled();
+});

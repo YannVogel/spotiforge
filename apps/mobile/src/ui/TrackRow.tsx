@@ -19,7 +19,12 @@ export type TrackRowProps = {
   /** Libellé lu pour `onPress` : « Écouter Nightcall dans Spotify ». */
   pressLabel?: string;
   disabled?: boolean;
+  /** Titre à chaud en cours de remplacement (reforge) : estompé, bouton figé. */
+  pending?: boolean;
 };
+
+/** Un titre en cours de remplacement s'estompe, sans changer de couleur. */
+const PENDING_OPACITY = 0.4;
 
 /**
  * Un titre sur l'enclume. À chaud : fond `surfaceHot`, bordure `borderHot`, lueur intérieure,
@@ -35,9 +40,13 @@ export function TrackRow({
   onPress,
   pressLabel,
   disabled = false,
+  pending = false,
 }: TrackRowProps) {
   return (
-    <View style={[styles.row, quenched ? styles.cold : styles.hot]}>
+    <View
+      style={[styles.row, quenched ? styles.cold : styles.hot, pending && styles.pending]}
+      accessibilityState={{ busy: pending }}
+    >
       <Pressable
         accessibilityRole={onPress ? 'link' : undefined}
         accessibilityLabel={pressLabel}
@@ -68,7 +77,7 @@ export function TrackRow({
         quenched={quenched}
         trackTitle={title}
         onPress={onToggleQuench}
-        disabled={disabled}
+        disabled={disabled || pending}
       />
     </View>
   );
@@ -84,6 +93,7 @@ const styles = StyleSheet.create({
   },
   hot: { backgroundColor: colors.surfaceHot, borderColor: colors.borderHot, ...glows.hotRow },
   cold: { backgroundColor: colors.surfaceCold, borderColor: colors.borderCold },
+  pending: { opacity: PENDING_OPACITY },
   body: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md },
   // La marge intérieure laisse la place à la lueur du numéro, sinon rognée au bord du texte ;
   // la marge négative la compense dans la mise en page.

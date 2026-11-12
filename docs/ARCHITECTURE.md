@@ -82,7 +82,7 @@ Un choix de ce tableau peut être remis en cause dans une issue, avec la raison.
 
 L'orchestration vit dans `features/forge/forge-run.ts` : elle remonte son avancement (écoutes, forge, vérification sur Spotify titre par titre, marquage) pour l'état « forge en cours », s'interrompt à l'annulation et ne touche jamais au brouillon. Le client du Worker est `infra/forge/worker-client.ts`. Chaque échec est traduit en message (`features/forge/failure.ts`, tableau « Erreurs » de [`GENERATION.md`](GENERATION.md)), avec un bouton pour réessayer.
 
-La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer).
+La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer). Elle partage le cœur de la forge (`runReforge`, même fichier) : seuls les titres à chaud sont remplacés et marqués, le titre et la description de la pièce ne changent pas, et un échec laisse la pièce telle quelle sur l'enclume. Pendant la reforge, l'écran reste affiché : les titres à chaud s'estompent, la trempe est figée.
 
 ## Autorisation du Worker
 

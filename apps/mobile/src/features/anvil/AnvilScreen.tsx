@@ -5,10 +5,13 @@ import type { PieceRecord } from '../../domain/history';
 import { hotTracks, quenchedCount } from '../../domain/piece';
 import { HeroTitle, PrimaryButton, SecondaryButton, Text, TrackRow } from '../../ui';
 import { borderWidth, colors, gradients, size, space } from '../../ui/theme';
+import { failureText } from '../forge/copy';
+import type { ReforgeState } from './anvil-store';
 import { ANVIL_COPY } from './copy';
 
 type AnvilScreenProps = {
   record: PieceRecord;
+  reforge: ReforgeState;
   onToggleQuench: (spotifyUri: string) => void;
   onBack: () => void;
   /** Remplace les titres à chaud (#37). */
@@ -20,6 +23,7 @@ type AnvilScreenProps = {
 /** « Sur l'enclume » : la pièce forgée, titre par titre, à chaud ou trempé. */
 export function AnvilScreen({
   record,
+  reforge,
   onToggleQuench,
   onBack,
   onReforge,
@@ -27,6 +31,7 @@ export function AnvilScreen({
 }: AnvilScreenProps) {
   const hot = hotTracks(record).length;
   const quenched = quenchedCount(record);
+  const reforging = reforge.status === 'reforging';
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
@@ -74,18 +79,27 @@ export function AnvilScreen({
               meta={ANVIL_COPY.meta(track.artist, track.year, track.known)}
               reason={track.reason}
               quenched={track.quenched}
+              pending={reforging && !track.quenched}
+              disabled={reforging}
               onToggleQuench={() => onToggleQuench(track.spotifyUri)}
             />
           ))}
         </View>
       </ScrollView>
       <View style={styles.footer}>
+        {reforge.status === 'failed' && (
+          <Text style={styles.status} accessibilityRole="alert">
+            {failureText(reforge.failure)}
+          </Text>
+        )}
         <SecondaryButton
           label={hot > 0 ? ANVIL_COPY.reforge(hot) : ANVIL_COPY.allQuenched}
           disabled={hot === 0}
+          loading={reforging}
+          loadingLabel={ANVIL_COPY.reforging}
           onPress={onReforge}
         />
-        <PrimaryButton label={ANVIL_COPY.send} onPress={onSend} />
+        <PrimaryButton label={ANVIL_COPY.send} disabled={reforging} onPress={onSend} />
       </View>
     </SafeAreaView>
   );
@@ -138,4 +152,5 @@ const styles = StyleSheet.create({
   legendText: { flex: 1 },
   list: { gap: space.sm },
   footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md, gap: space.md },
+  status: { textAlign: 'center' },
 });
