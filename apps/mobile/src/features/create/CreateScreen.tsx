@@ -21,6 +21,7 @@ import {
   Wordmark,
 } from '../../ui';
 import { colors, size, space } from '../../ui/theme';
+import { SIGN_IN_COPY } from '../auth/copy';
 import { useDraftStore } from '../draft/draft-store';
 import { FORGE_COPY, failureText, progressText } from '../forge/copy';
 import type { ForgeState } from '../forge/forge-store';
@@ -39,6 +40,9 @@ type CreateScreenProps = {
   onForge: () => void;
   onCancelForge: () => void;
   onOpenPieces: () => void;
+  /** Nom affiché du compte connecté, pour le lien de déconnexion. */
+  accountName: string | null;
+  onSignOut: () => void;
 };
 
 /** « Qu'est-ce qu'on forge ? » : le minerai et les réglages, branchés sur le brouillon. */
@@ -50,6 +54,8 @@ export function CreateScreen({
   onForge,
   onCancelForge,
   onOpenPieces,
+  accountName,
+  onSignOut,
 }: CreateScreenProps) {
   const store = useDraftStore();
   const { draft } = store;
@@ -102,6 +108,16 @@ export function CreateScreen({
           <DiscoverySetting discovery={draft.settings.discovery} onChange={store.setDiscovery} />
           <DecadeChoices selected={draft.settings.decades} onToggle={store.toggleDecade} />
           <ShapeChoices shape={draft.settings.shape} onSelect={store.setShape} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={onSignOut}
+            disabled={forge.status === 'forging'}
+            style={styles.signOut}
+          >
+            <Text variant="label" color="textMuted">
+              {accountName ? SIGN_IN_COPY.signOutOf(accountName) : SIGN_IN_COPY.signOut}
+            </Text>
+          </Pressable>
         </ScrollView>
         <View style={styles.footer}>
           {forge.status === 'forging' && (
@@ -142,6 +158,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   alloy: { gap: space.xs },
   piecesLink: { minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center' },
+  signOut: { minHeight: size.touchMin, justifyContent: 'center', alignSelf: 'center' },
   footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md, gap: space.md },
   status: { textAlign: 'center' },
 });

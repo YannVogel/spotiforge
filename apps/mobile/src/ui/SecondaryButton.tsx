@@ -27,7 +27,7 @@ export function SecondaryButton({
         pressed && styles.pressed,
       ]}
     >
-      <Text variant="cta" color={disabled ? 'textMuted' : 'flame'}>
+      <Text variant="cta" color={disabled ? 'textMuted' : 'flame'} style={styles.label}>
         {loading && loadingLabel ? loadingLabel : label}
       </Text>
     </Pressable>
@@ -35,6 +35,8 @@ export function SecondaryButton({
 }
 
 const styles = StyleSheet.create({
+  // Un libellé long (« Se connecter avec Spotify ») passe sur deux lignes, centrées.
+  label: { textAlign: 'center' },
   base: {
     minHeight: size.secondaryHeight,
     paddingHorizontal: space.lg,

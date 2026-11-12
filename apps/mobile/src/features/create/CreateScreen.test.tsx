@@ -17,6 +17,7 @@ async function renderScreen(
   const onOpenPieces = jest.fn();
   const onResume = jest.fn();
   const onDismissResume = jest.fn();
+  const onSignOut = jest.fn();
   await render(
     <CreateScreen
       forge={forge}
@@ -26,9 +27,11 @@ async function renderScreen(
       onForge={onForge}
       onCancelForge={onCancelForge}
       onOpenPieces={onOpenPieces}
+      accountName="Camille"
+      onSignOut={onSignOut}
     />,
   );
-  return { onForge, onCancelForge, onOpenPieces, onResume, onDismissResume };
+  return { onForge, onCancelForge, onOpenPieces, onResume, onDismissResume, onSignOut };
 }
 
 const increment = { nativeEvent: { actionName: 'increment' } };
@@ -225,4 +228,12 @@ describe('reprise d’une pièce', () => {
     await renderScreen();
     expect(screen.queryByText(/Une pièce t’attend/)).toBeNull();
   });
+});
+
+it('donne accès à la déconnexion', async () => {
+  const { onSignOut } = await renderScreen();
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Se déconnecter (Camille)' }));
+
+  expect(onSignOut).toHaveBeenCalledTimes(1);
 });
