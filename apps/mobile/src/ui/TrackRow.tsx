@@ -85,6 +85,13 @@ const styles = StyleSheet.create({
   hot: { backgroundColor: colors.surfaceHot, borderColor: colors.borderHot, ...glows.hotRow },
   cold: { backgroundColor: colors.surfaceCold, borderColor: colors.borderCold },
   body: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md },
-  number: { width: size.trackNumberWidth, textAlign: 'center' },
+  // La marge intérieure laisse la place à la lueur du numéro, sinon rognée au bord du texte ;
+  // la marge négative la compense dans la mise en page.
+  number: {
+    width: size.trackNumberWidth + 2 * space.lg,
+    padding: space.lg,
+    margin: -space.lg,
+    textAlign: 'center',
+  },
   texts: { flex: 1, minWidth: 0, gap: space.xs },
 });
