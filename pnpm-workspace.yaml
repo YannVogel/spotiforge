@@ -35,6 +35,9 @@ minimumReleaseAgeExclude:
   - expo@58.0.24
   - expo-splash-screen@58.0.14
   - expo-sqlite@58.0.16
+  - expo-auth-session@58.0.18
+  - expo-crypto@58.0.8
+  - expo-web-browser@58.0.8
 
 # Réglage par défaut de create-expo-app avec pnpm : le plus sûr pour React Native.
 nodeLinker: hoisted
