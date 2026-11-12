@@ -1,7 +1,8 @@
-import type { SpotifyGateway } from '../../domain/spotify';
+import { SpotifyError, type SpotifyGateway } from '../../domain/spotify';
 import type { SpotifyHttp } from './http';
 import {
   itemsPageSchema,
+  libraryContainsSchema,
   meSchema,
   searchTracksSchema,
   toAccount,
@@ -14,6 +15,8 @@ import {
 export const SEARCH_LIMIT = 10;
 /** Limite de `GET /me/top/{type}` et de `GET /me/player/recently-played`. */
 export const LISTENING_LIMIT = 50;
+/** URI au plus par appel à `GET /me/library/contains`. */
+export const LIBRARY_CONTAINS_LIMIT = 40;
 
 /** Retire ce qui casserait les filtres de champ de la recherche (`:` et guillemets). */
 function searchTerm(value: string): string {
@@ -44,6 +47,21 @@ export function createSpotifyGateway(request: SpotifyHttp): SpotifyGateway {
       return toListenedArtists(
         await request(`/me/top/artists?${params.toString()}`, itemsPageSchema),
       );
+    },
+
+    async libraryContains(uris) {
+      if (uris.length === 0) return [];
+      if (uris.length > LIBRARY_CONTAINS_LIMIT) {
+        throw new RangeError(`libraryContains accepts ${LIBRARY_CONTAINS_LIMIT} URIs at most`);
+      }
+      const params = new URLSearchParams({ uris: uris.join(',') });
+      const saved = await request(
+        `/me/library/contains?${params.toString()}`,
+        libraryContainsSchema,
+      );
+      // Une réponse qui ne correspond pas aux URI demandées est inexploitable.
+      if (saved.length !== uris.length) throw new SpotifyError('unavailable');
+      return saved;
     },
 
     async getRecentlyPlayedArtists() {
