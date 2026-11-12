@@ -13,6 +13,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   SegmentButton,
+  TrackRow,
   Wordmark,
 } from '../ui';
 import { colors, size, space } from '../ui/theme';
@@ -33,6 +34,7 @@ export default function ComponentsDemoScreen() {
   const [shape, setShape] = useState<Shape>('rise');
   const [minutes, setMinutes] = useState(40);
   const [discovery, setDiscovery] = useState(60);
+  const [quenched, setQuenched] = useState(false);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -85,6 +87,22 @@ export default function ComponentsDemoScreen() {
             />
           ))}
         </View>
+        <TrackRow
+          number={1}
+          title="Tick of the Clock"
+          meta="Chromatics · 2007 · découverte"
+          reason="Pulsation hypnotique et dépouillée : on démarre en roue libre."
+          quenched={quenched}
+          onToggleQuench={() => setQuenched((current) => !current)}
+        />
+        <TrackRow
+          number={4}
+          title="Nightcall"
+          meta="Kavinsky · 2010 · connu"
+          reason="La référence de la conduite nocturne."
+          quenched
+          onToggleQuench={() => {}}
+        />
         <SecondaryButton label="Reforger 5 titres" onPress={() => {}} />
         <SecondaryButton label="Reforger 5 titres" onPress={() => {}} disabled />
         <PrimaryButton label="Forger la playlist" onPress={() => {}} />

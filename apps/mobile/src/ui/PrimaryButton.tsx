@@ -38,7 +38,7 @@ export function PrimaryButton({
         pressed && styles.pressed,
       ]}
     >
-      <Text variant="cta" color={disabled ? 'textMuted' : 'onEmber'}>
+      <Text variant="cta" color={disabled ? 'textMuted' : 'onEmber'} style={styles.label}>
         {loading && loadingLabel ? loadingLabel : label}
       </Text>
     </Pressable>
@@ -46,6 +46,8 @@ export function PrimaryButton({
 }
 
 const styles = StyleSheet.create({
+  // Un libellé long (« Se connecter avec Spotify ») passe sur deux lignes, centrées.
+  label: { textAlign: 'center' },
   base: {
     minHeight: size.ctaHeight,
     paddingHorizontal: space.lg,

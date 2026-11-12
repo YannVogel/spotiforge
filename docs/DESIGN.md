@@ -64,12 +64,14 @@ Les deux polices sont embarquées dans l'app. Pas de chargement réseau.
 
 `TrackRow` à chaud : fond `surfaceHot`, bordure `borderHot`, lueur intérieure, numéro `flame` lumineux. Trempé : fond `surfaceCold`, bordure `borderCold`, aucune lueur, numéro `steel`.
 
+L'écran « Sur l'enclume » porte en haut la lueur `anvilGlow`, pendant de `forgeGlow` (le foyer en bas de l'écran Création). Le bouton de reforge annonce le nombre de titres à chaud (« Reforger 5 titres ») et devient « Tout est trempé », désactivé, quand il n'y en a plus. Sous la description, « Modifier le titre et la description » ouvre deux champs Braise (100 et 300 caractères au plus) ; un titre vidé garde l'ancien. Appuyer sur le texte d'un titre l'ouvre dans l'app Spotify, ou sur sa page web si l'app manque (lu « Écouter Nightcall dans Spotify »).
+
 ## Mouvement
 
-- **Tremper** : le titre passe du chaud au froid en 300 ms environ, la lueur s'éteint. Retour haptique léger.
-- **Reforger** : les titres à chaud s'embrasent brièvement puis sont remplacés. Les titres trempés ne bougent pas.
-- **Forge en cours** : la lueur du foyer en bas d'écran pulse. Pas de spinner générique.
-- Respecter le réglage système de réduction des animations : dans ce cas, changements d'état instantanés.
+- **Tremper** : le titre passe du chaud au froid en 300 ms (fond, bordure et numéro interpolés), la lueur intérieure s'éteint. Retour haptique léger, à la trempe seulement (pas à la remise au feu).
+- **Reforger** : les titres à chaud s'embrasent brièvement (450 ms, voile `ember`) puis restent estompés jusqu'à leur remplacement. Les titres trempés ne bougent pas.
+- **Forge en cours** : la lueur du foyer en bas d'écran pulse (environ 1,8 s par cycle). Pas de spinner générique : le bouton principal affiche « Forge en cours… », une ligne dit l'étape (« Vérification sur Spotify : 12 / 45 titres ») et « Annuler la forge » ramène au minerai.
+- Respecter le réglage système de réduction des animations : dans ce cas, changements d'état instantanés. Dans tous les cas, l'état (texte des boutons, compteur) change tout de suite : il n'attend jamais la fin d'une animation.
 
 ## Vocabulaire de l'interface
 

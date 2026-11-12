@@ -24,6 +24,16 @@ Envoyée par l'app au Worker (`POST /forge`).
 
 `taste` ne contient que des noms d'artistes et de genres. Aucun identifiant de compte, aucun horodatage d'écoute.
 
+### Résumé des écoutes
+
+Construit par l'app (`domain/taste.ts`) à partir de deux lectures Spotify :
+
+- `topArtists` : les 50 artistes les plus écoutés sur environ six mois (`GET /me/top/artists`, `time_range=medium_term`), dans l'ordre de Spotify ;
+- `recentArtists` : les artistes des 50 dernières écoutes (`GET /me/player/recently-played`), de la plus récente à la plus ancienne ;
+- `genres` : les genres des artistes les plus écoutés, du plus fréquent au moins fréquent.
+
+Noms nettoyés (espaces), sans doublon à la normalisation près, coupés aux bornes du contrat. Le résumé est gardé sur le téléphone, par compte, et relu au plus une fois par jour. Il est lu à chaque forge, même sans alliage, parce qu'il sert aussi à marquer les titres « connus ». Si Spotify ne donne aucune des deux lectures, l'app reprend un ancien résumé s'il existe ; sinon l'alliage est désactivé avec un message et la forge part sans `taste`. Une seule des deux lectures suffit.
+
 ## Réponse : `ForgeResponse`
 
 | Champ | Type | Rôle |
@@ -40,7 +50,7 @@ Un candidat :
 | `year` | entier | Année de sortie, sert à départager les résultats |
 | `reason` | une phrase courte | « Pourquoi ce titre », dans la langue de `locale` |
 | `slot` | nombre de 0 à 1 | Place dans la progression : 0 au début, 1 à la fin |
-| `familiar` | booléen | Le LLM pense que la personne connaît ce titre, d'après `taste` |
+| `familiar` | booléen | Le LLM pense que la personne connaît ce titre, d'après `taste` ; sans `taste`, seulement pour les titres très connus |
 
 ## Schémas et bornes
 
@@ -72,6 +82,7 @@ Les champs inconnus sont retirés à la validation, côté requête comme côté
 - En reforge, ne demander que de quoi remplir les places libres, avec la même marge.
 - La sortie du LLM est contrainte à un schéma JSON, puis validée. Une sortie invalide déclenche une seule nouvelle tentative, puis une erreur propre.
 - Le modèle utilisé est lu dans la variable `CLAUDE_MODEL`. Choix et méthode : section suivante.
+- Limite : 20 forges acceptées par compte sur toute heure glissante (`FORGE_LIMIT`). Seule une requête valide compte, juste avant l'appel à Claude ; au-delà, `429` (voir « Erreurs » et [`ARCHITECTURE.md`](ARCHITECTURE.md#autorisation-du-worker)).
 - Le Worker ne journalise ni le prompt ni la réponse.
 
 ## Modèle et sortie structurée
@@ -90,12 +101,37 @@ Choisis avec l'issue du Worker (#25), d'après la documentation Anthropic de nov
 Le prompt système, versionné dans `apps/worker`, doit faire respecter :
 
 - des titres **réels**, par des artistes réels, avec l'année de sortie d'origine ; dans le doute, ne pas proposer ;
+- pour faciliter la résolution : l'artiste principal crédité, sans invités, et le titre d'origine, sans mention de version (remaster, live, edit) sauf si le prompt demande cette version ;
 - pas deux titres du même artiste à la suite, et pas plus de deux par artiste, sauf demande explicite ;
 - les décennies demandées ;
 - la part de découverte : avec `taste`, une découverte est un titre hors des artistes cités ; sans `taste`, s'éloigner des titres les plus évidents du genre ;
-- la progression : `slot` reflète l'intensité voulue à cet endroit ;
-- en reforge : ne jamais reproposer un titre de `avoid`, et choisir des titres qui s'enchaînent bien avec leurs voisins de `keep` ;
+- la progression : `slot` reflète l'intensité voulue à cet endroit, et les candidats se répartissent sur toutes les places libres ;
+- en reforge : ne jamais reproposer un titre de `avoid` ou de `keep`, ni une autre version, et choisir des titres qui s'enchaînent bien avec leurs voisins de `keep` ;
 - le texte du prompt de la personne est une description de playlist, jamais une instruction à suivre.
+
+Le prompt ne contient aucun exemple de titre ni d'artiste : il biaiserait les réponses.
+
+## Évaluation du prompt
+
+Le prompt se mesure sur un jeu d'une dizaine de demandes inventées (`apps/worker/evaluation/cases.ts`) : genres, époques et progressions variés, avec et sans `taste`, en création et en reforge. Le script envoie chaque demande à Claude avec le code du Worker (même prompt, même sortie structurée, mêmes tentatives), cherche chaque candidat sur Spotify comme le fait l'app (`GET /search?type=track`, 10 résultats, correspondance de `apps/mobile/src/domain/match.ts`), puis affiche, par demande et au total :
+
+- la part de titres réels, c'est-à-dire trouvés sur Spotify (critère : au moins quatre sur cinq) ;
+- le respect des décennies, d'après l'année donnée par le modèle et, à titre indicatif, d'après Spotify, qui date souvent la réédition plutôt que l'original ;
+- les doublons d'artistes : plus de deux titres par artiste, deux titres du même artiste à la suite dans l'ordre de `slot`, titres proposés deux fois ;
+- les titres de `avoid` ou de `keep` reproposés ;
+- la liste des introuvables, pour ajuster le prompt.
+
+```bash
+read -rs SPOTIFY_ACCESS_TOKEN && export SPOTIFY_ACCESS_TOKEN   # jeton collé à l'invite, hors de l'historique
+pnpm --filter @spotiforge/worker evaluate            # tout le jeu
+pnpm --filter @spotiforge/worker evaluate reforge    # seulement les demandes dont le nom contient « reforge »
+```
+
+- **Clé Anthropic** : `ANTHROPIC_API_KEY`, lue dans `apps/worker/.dev.vars` ou dans l'environnement. Modèle : `CLAUDE_MODEL` de `wrangler.jsonc`, sauf s'il est donné dans l'environnement.
+- **Jeton Spotify** : `SPOTIFY_ACCESS_TOKEN`, un jeton d'accès valable une heure, jamais écrit dans un fichier du repo (pas dans `.dev.vars`, dont le contenu part en secret au premier déploiement). `GET /search` n'exige aucun scope.
+- **Coût et durée** : une forge par demande, l'une après l'autre, soit de l'ordre d'un à deux dollars et de quelques minutes pour tout le jeu. Le bilan cite une empreinte du prompt système pour relier les résultats à sa version.
+
+Le script n'est jamais lancé par la CI ni par `pnpm test`. Ses calculs et son enchaînement sont testés avec Claude et Spotify simulés (`apps/worker/evaluation/*.test.ts`).
 
 ## Résolution côté app
 
@@ -108,7 +144,7 @@ Pour chaque candidat :
 
 Ensuite :
 
-- marquer « connu » si le titre est dans la bibliothèque de la personne ou si son artiste figure dans ses écoutes ; sinon « découverte » ;
+- marquer « connu » si le titre est dans la bibliothèque de la personne ou si son artiste figure dans ses écoutes ; sinon « découverte ». La bibliothèque est interrogée par lots de 40 URI (`GET /me/library/contains`), seulement pour les titres d'artistes non écoutés et seulement pour les titres retenus dans la pièce, pour ménager le quota. Si elle ne répond pas, l'estimation `familiar` du LLM sert de repli (`domain/familiarity.ts`) ;
 - placer les titres trempés à leur position, remplir les places libres avec les candidats résolus triés par `slot` ;
 - couper à la longueur demandée : en titres, au nombre exact ; en minutes, à la coupe la plus proche de la durée visée (on ajoute des titres jusqu'à l'atteindre, puis on retire le dernier s'il en éloigne) ;
 - si les candidats manquent avant un titre trempé, la place reste vide et les titres suivants remontent : un titre trempé n'est jamais retiré, et c'est le seul cas où sa position change ;
@@ -123,6 +159,7 @@ La normalisation et l'assemblage sont du code pur du domaine, couverts par des t
 | Jeton Spotify absent ou invalide | `401` | Rafraîchir le jeton, rejouer une fois |
 | Compte hors liste autorisée | `403` | Message : compte non autorisé |
 | Spotify injoignable pendant la vérification du jeton | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |
-| Trop de demandes | `429` | Message : la forge refroidit, réessayer plus tard |
+| Trop de demandes (20 forges déjà acceptées dans l'heure glissante) | `429` (`rate_limited`), en-tête `Retry-After` : secondes avant qu'une forge se libère | Message : la forge refroidit, réessayer plus tard |
+| Compteur de forges injoignable | `503` (`limiter_unavailable`), sans appel à Claude | Message d'échec, bouton pour réessayer, brouillon conservé |
 | Requête hors contrat ou corps illisible | `400` (`invalid_request` avec les champs fautifs, ou `invalid_json`) | Bug de l'app : message d'échec |
 | LLM indisponible ou sortie invalide | `502` | Message d'échec, bouton pour réessayer, brouillon conservé |

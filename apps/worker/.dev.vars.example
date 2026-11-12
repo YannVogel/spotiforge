@@ -1,5 +1,6 @@
 # Copier vers apps/worker/.dev.vars (ignoré par git) puis remplacer les valeurs factices.
-# En production, ces secrets se posent avec `pnpm exec wrangler secret put <NOM>`.
+# En production : section « Déployer le Worker » du README (premier déploiement avec
+# `--secrets-file .dev.vars`, puis `wrangler secret put <NOM>`).
 
 # Clé de l'API Anthropic. Ne vit que dans le Worker, jamais dans l'app.
 ANTHROPIC_API_KEY=fake-anthropic-api-key

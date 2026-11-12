@@ -1,4 +1,4 @@
-import { forgeSettingsSchema } from '@spotiforge/shared';
+import { forgeSettingsSchema, tasteSchema } from '@spotiforge/shared';
 import { z } from 'zod';
 
 // Validation des lignes lues : rien n'entre dans le domaine sans passer par ces schémas.
@@ -73,6 +73,11 @@ export const trackCacheRowSchema = z.object({
   year: z.number().int().nullable(),
   duration_ms: z.number().int().nullable(),
   resolved_at: z.string(),
+});
+
+export const tasteCacheRowSchema = z.object({
+  taste: jsonColumn(tasteSchema),
+  fetched_at: z.string(),
 });
 
 /** Erreur de lecture : la ligne ne respecte pas le schéma. Le message ne recopie aucune valeur. */

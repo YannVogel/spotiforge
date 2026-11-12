@@ -1,4 +1,4 @@
-import { FORGE_LIMITS, type ForgeRequest } from '@spotiforge/shared';
+import { FORGE_LIMITS } from '@spotiforge/shared';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,28 +9,65 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { canForge, toForgeRequest } from '../../domain/draft';
-import { AlloySwitch, HeroTitle, OreField, PrimaryButton, Text, Wordmark } from '../../ui';
-import { colors, gradients, size, space } from '../../ui/theme';
+import { canForge } from '../../domain/draft';
+import {
+  AlloySwitch,
+  ForgeGlow,
+  HeroTitle,
+  OreField,
+  PrimaryButton,
+  SecondaryButton,
+  Text,
+  Wordmark,
+} from '../../ui';
+import { colors, size, space } from '../../ui/theme';
+import { SIGN_IN_COPY } from '../auth/copy';
 import { useDraftStore } from '../draft/draft-store';
+import { FORGE_COPY, failureText, progressText } from '../forge/copy';
+import { OFFLINE_COPY } from '../network/copy';
+import type { ForgeState } from '../forge/forge-store';
+import { useAlloyStore } from '../taste/taste-store';
 import { CREATE_COPY } from './copy';
+import { ResumeOffer } from './ResumeOffer';
 import { DecadeChoices, DiscoverySetting, LengthSetting, ShapeChoices } from './settings';
 
 type CreateScreenProps = {
-  /** Lance la forge avec la requête construite depuis le brouillon. */
-  onForge: (request: ForgeRequest) => void;
+  forge: ForgeState;
+  /** Hors ligne : la forge attend le réseau, le minerai reste modifiable. */
+  offline: boolean;
+  /** Pièce à reprendre sur l'enclume, s'il y en a une. */
+  resume: { title: string } | null;
+  onResume: () => void;
+  onDismissResume: () => void;
+  /** Lance la forge depuis le brouillon (ou la relance après un échec). */
+  onForge: () => void;
+  onCancelForge: () => void;
   onOpenPieces: () => void;
+  /** Nom affiché du compte connecté, pour le lien de déconnexion. */
+  accountName: string | null;
+  onSignOut: () => void;
 };
 
 /** « Qu'est-ce qu'on forge ? » : le minerai et les réglages, branchés sur le brouillon. */
-export function CreateScreen({ onForge, onOpenPieces }: CreateScreenProps) {
+export function CreateScreen({
+  forge,
+  offline,
+  resume,
+  onResume,
+  onDismissResume,
+  onForge,
+  onCancelForge,
+  onOpenPieces,
+  accountName,
+  onSignOut,
+}: CreateScreenProps) {
   const store = useDraftStore();
   const { draft } = store;
+  const alloyUnavailable = useAlloyStore((state) => state.availability === 'unavailable');
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      {/* Lueur du foyer, décorative : elle ne capte ni le toucher ni les lecteurs d'écran. */}
-      <View style={styles.forgeGlow} pointerEvents="none" accessibilityElementsHidden />
+      <ForgeGlow pulsing={forge.status === 'forging'} />
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -48,6 +85,9 @@ export function CreateScreen({ onForge, onOpenPieces }: CreateScreenProps) {
               </Text>
             </Pressable>
           </View>
+          {resume && forge.status !== 'forging' && (
+            <ResumeOffer title={resume.title} onResume={onResume} onDismiss={onDismissResume} />
+          )}
           <HeroTitle>{CREATE_COPY.hero}</HeroTitle>
           <OreField
             label={CREATE_COPY.ore}
@@ -55,22 +95,60 @@ export function CreateScreen({ onForge, onOpenPieces }: CreateScreenProps) {
             onChangeText={store.setPrompt}
             maxLength={FORGE_LIMITS.prompt.maxLength}
           />
-          <AlloySwitch
-            label={CREATE_COPY.alloy}
-            value={draft.settings.useTaste}
-            onValueChange={store.setUseTaste}
-          />
+          <View style={styles.alloy}>
+            <AlloySwitch
+              label={CREATE_COPY.alloy}
+              value={draft.settings.useTaste && !alloyUnavailable}
+              onValueChange={store.setUseTaste}
+              disabled={alloyUnavailable}
+            />
+            {alloyUnavailable && (
+              <Text variant="meta" color="textMuted">
+                {CREATE_COPY.alloyUnavailable}
+              </Text>
+            )}
+          </View>
           <LengthSetting length={draft.settings.length} onChange={store.setLengthValue} />
           <DiscoverySetting discovery={draft.settings.discovery} onChange={store.setDiscovery} />
           <DecadeChoices selected={draft.settings.decades} onToggle={store.toggleDecade} />
           <ShapeChoices shape={draft.settings.shape} onSelect={store.setShape} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={onSignOut}
+            disabled={forge.status === 'forging'}
+            style={styles.signOut}
+          >
+            <Text variant="label" color="textMuted">
+              {accountName ? SIGN_IN_COPY.signOutOf(accountName) : SIGN_IN_COPY.signOut}
+            </Text>
+          </Pressable>
         </ScrollView>
         <View style={styles.footer}>
+          {forge.status === 'forging' && (
+            <Text color="textSoft" style={styles.status} accessibilityLiveRegion="polite">
+              {progressText(forge.progress)}
+            </Text>
+          )}
+          {offline && forge.status !== 'forging' && (
+            <Text color="textSoft" style={styles.status} accessibilityLiveRegion="polite">
+              {OFFLINE_COPY.create}
+            </Text>
+          )}
+          {forge.status === 'failed' && !offline && (
+            <Text color="text" style={styles.status} accessibilityRole="alert">
+              {failureText(forge.failure)}
+            </Text>
+          )}
           <PrimaryButton
-            label={CREATE_COPY.forge}
-            disabled={!canForge(draft)}
-            onPress={() => onForge(toForgeRequest(draft))}
+            label={forge.status === 'failed' ? FORGE_COPY.retry : CREATE_COPY.forge}
+            loading={forge.status === 'forging'}
+            loadingLabel={FORGE_COPY.forging}
+            disabled={!canForge(draft) || offline}
+            onPress={onForge}
           />
+          {forge.status === 'forging' && (
+            <SecondaryButton label={FORGE_COPY.cancel} onPress={onCancelForge} />
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -87,14 +165,9 @@ const styles = StyleSheet.create({
     gap: space.lg,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  alloy: { gap: space.xs },
   piecesLink: { minHeight: size.touchMin, minWidth: size.touchMin, justifyContent: 'center' },
-  footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md },
-  forgeGlow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '45%',
-    backgroundImage: gradients.forgeGlow,
-  },
+  signOut: { minHeight: size.touchMin, justifyContent: 'center', alignSelf: 'center' },
+  footer: { paddingHorizontal: size.screenPadding, paddingVertical: space.md, gap: space.md },
+  status: { textAlign: 'center' },
 });

@@ -8,7 +8,7 @@ Tu décris un moment, tu règles quatre curseurs, l'IA compose. Tu « trempes »
 
 ## État
 
-En construction. En place : le monorepo (`apps/mobile`, `apps/worker`, `packages/shared`) avec lint, tests et CI ; le thème Braise et ses composants ; l'écran Création branché sur le brouillon ; le domaine (assemblage, trempe, reforge, correspondance des titres) ; la base locale ; le Worker de forge (`POST /forge`) ; la connexion, la session et le client Spotify, encore non vérifiés sur un vrai compte. Pas encore branchés de bout en bout : la connexion dans l'interface, la forge depuis l'app, l'aperçu et l'envoi. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
+En construction, parcours principal branché de bout en bout mais **pas encore essayé sur un vrai compte Spotify** : connexion, Création, forge (résumé des écoutes, Worker, résolution, complément, connu / découverte), enclume (trempe, reforge, édition, écoute, animations), envoi et rafraîchissement d'une playlist, pièces enregistrées sur le téléphone et reprises au lancement, données cloisonnées par compte, hors ligne et barrière d'erreur. Le Worker limite les forges par compte et se déploie à la main (voir plus bas), sans avoir encore été déployé. Manquent surtout : « Mes pièces » et les moules dans l'interface (maquettes à dessiner), l'icône, les builds internes. Suite : [`docs/ROADMAP.md`](docs/ROADMAP.md) et les issues.
 
 Commandes d'installation et de lancement : section « Commandes » de [`CLAUDE.md`](CLAUDE.md).
 
@@ -32,9 +32,54 @@ cp apps/worker/.dev.vars.example apps/worker/.dev.vars
 
 URI de redirection à déclarer dans le dashboard Spotify (connexion en PKCE) : `spotiforge://callback` pour un build, y compris de développement ; dans Expo Go, `exp://<adresse IP de l'ordinateur>:8081/--/callback` (elle change avec l'adresse IP).
 
-Les variables `EXPO_PUBLIC_*` sont intégrées au bundle de l'app : elles ne doivent contenir aucun secret. En production, les secrets du Worker se posent avec `pnpm --filter @spotiforge/worker exec wrangler secret put <NOM>`.
+Les variables `EXPO_PUBLIC_*` sont intégrées au bundle de l'app : elles ne doivent contenir aucun secret. En production, les secrets du Worker se posent au premier déploiement, puis avec `wrangler secret put` (voir « Déployer le Worker »).
 
 Une valeur manquante ou invalide est signalée par son nom : l'app s'arrête au démarrage avec une `AppConfigError`, le Worker répond `500 misconfigured` et journalise le nom de la variable (jamais sa valeur).
+
+## Déployer le Worker
+
+Prérequis : un compte Cloudflare (l'offre gratuite suffit : elle inclut les Workers et les Durable Objects à stockage SQLite qui comptent les forges), et `apps/worker/.dev.vars` rempli avec les vraies valeurs (voir « Configuration »). Conseillé : une clé Anthropic dédiée à Spotiforge, dans un espace de travail de la console Anthropic doté d'une limite de dépense mensuelle, en plus de la limite de forges du Worker.
+
+Les commandes se lancent depuis la racine du repo ; les chemins passés à Wrangler sont relatifs à `apps/worker`.
+
+1. Se connecter à Cloudflare, une fois par machine :
+
+   ```bash
+   pnpm --filter @spotiforge/worker exec wrangler login
+   ```
+
+2. Premier déploiement, secrets compris (un déploiement échoue tant qu'un secret de `secrets.required` manque) :
+
+   ```bash
+   pnpm --filter @spotiforge/worker exec wrangler deploy --secrets-file .dev.vars
+   ```
+
+   Une variable d'environnement du shell portant le même nom (`ANTHROPIC_API_KEY`, par exemple) l'emporte sur le fichier : vérifie qu'elle n'est pas définie. Si le compte n'a pas encore de sous-domaine `workers.dev`, Wrangler en demande un. Il affiche ensuite l'URL du Worker : `https://spotiforge-worker.<sous-domaine>.workers.dev`.
+
+3. Reporter cette URL dans `EXPO_PUBLIC_WORKER_URL` (`apps/mobile/.env`), puis relancer Metro.
+
+4. Vérifier :
+
+   ```bash
+   curl https://spotiforge-worker.<sous-domaine>.workers.dev/health
+   # {"status":"ok","app":"Spotiforge"}
+   curl -i -X POST https://spotiforge-worker.<sous-domaine>.workers.dev/forge
+   # 401 : aucun jeton Spotify
+   ```
+
+   Puis forger une playlist depuis l'app, connecté avec un compte de `ALLOWED_SPOTIFY_IDS`.
+
+Déploiements suivants : `pnpm --filter @spotiforge/worker exec wrangler deploy`. Les secrets déjà posés sont conservés.
+
+Changer un secret (nouvelle clé Anthropic, compte ajouté ou retiré) :
+
+```bash
+pnpm --filter @spotiforge/worker exec wrangler secret put ALLOWED_SPOTIFY_IDS
+```
+
+La valeur est demandée à l'invite, jamais passée en argument (elle resterait dans l'historique du shell). Le Worker est redéployé aussitôt. L'identifiant d'un compte Spotify est le « nom d'utilisateur » affiché sur la page du compte Spotify.
+
+Journaux en direct : `pnpm --filter @spotiforge/worker exec wrangler tail` ; ils ne contiennent ni prompt, ni jeton, ni identifiant de compte. Vérifier le paquet sans rien envoyer : `pnpm --filter @spotiforge/worker exec wrangler deploy --dry-run --outdir dist`.
 
 ## Où lire quoi
 

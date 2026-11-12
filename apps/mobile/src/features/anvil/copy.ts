@@ -1,0 +1,27 @@
+// Textes de l'écran « Sur l'enclume », dans le vocabulaire de docs/DESIGN.md et de la maquette.
+export const ANVIL_COPY = {
+  back: 'Retour au feu',
+  backA11y: 'Retour au feu : revenir au minerai et aux réglages',
+  heading: 'Sur l’enclume',
+  legendHot: 'À chaud',
+  legendHotText: ' : sera reforgé.',
+  legendQuenched: 'Trempé',
+  legendQuenchedText: ' : gardé tel quel.',
+  quenchedCount: (count: number) => `${count} ${count > 1 ? 'trempés' : 'trempé'}`,
+  meta: (artist: string, year: number, known: boolean) =>
+    `${artist} · ${year} · ${known ? 'connu' : 'découverte'}`,
+  reforge: (hot: number) => `Reforger ${hot} ${hot > 1 ? 'titres' : 'titre'}`,
+  allQuenched: 'Tout est trempé',
+  reforging: 'Reforge en cours…',
+  send: 'Envoyer sur Spotify',
+  sending: 'Envoi en cours…',
+  retrySend: 'Réessayer l’envoi',
+  recreatePlaylist: 'Recréer la playlist',
+  sent: 'Pièce envoyée sur Spotify, en playlist privée.',
+  openPlaylist: 'Ouvrir dans Spotify',
+  edit: 'Modifier le titre et la description',
+  editDone: 'Terminer',
+  titleField: 'Titre de la playlist',
+  descriptionField: 'Description',
+  listen: (title: string) => `Écouter ${title} dans Spotify`,
+} as const;

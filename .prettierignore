@@ -5,5 +5,6 @@ coverage/
 .expo/
 **/expo-env.d.ts
 dist/
+.claude/
 # La prose des docs n'est pas reformatée automatiquement.
 *.md

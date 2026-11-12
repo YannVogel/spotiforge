@@ -14,7 +14,7 @@
            │ jeton Spotify de la personne  │ jeton Spotify + demande
            ▼                               ▼
    api.spotify.com                 Cloudflare Worker ──► API Anthropic (Claude)
-                                   (sans stockage)
+                                   (ne garde qu'un compteur de forges)
 ```
 
 Trois acteurs :
@@ -51,8 +51,12 @@ Règle de dépendance : tout pointe vers le domaine (`features → domain ← in
 
 - `domain` n'importe rien de React, d'Expo ni du réseau. Il définit les interfaces dont il a besoin (`SpotifyGateway`, `ForgeGateway`, `PieceRepository`).
 - `infra` implémente ces interfaces. Elle importe le domaine, jamais l'inverse.
-- `features` assemble domaine et infra, et expose des hooks aux écrans.
+- `features` assemble domaine et infra, et expose des hooks aux écrans. La racine de composition, `features/app/services.ts`, est le seul endroit qui crée l'infra réelle (session, client Spotify, client du Worker, base SQLite) ; tout le reste reçoit ses dépendances, ce qui le garde testable.
 - `ui` ne connaît ni Spotify ni le Worker.
+
+## Navigation et session
+
+`features/app/AppStack.tsx` garde la navigation par la session (`Stack.Protected` d'Expo Router, avec `redirectTo`) : sans session, seul l'écran de connexion (`/sign-in`) est accessible, même par lien direct ; une fois connecté, on arrive sur Création, et la connexion n'est plus accessible. L'écran de lancement reste affiché tant que la session gardée n'est pas reprise. Les écrans de démonstration (`/theme`, `/components`) restent hors de la garde, en développement seulement.
 
 ## Choix techniques
 
@@ -77,10 +81,16 @@ Un choix de ce tableau peut être remis en cause dans une issue, avec la raison.
 3. Le Worker vérifie le jeton en appelant `GET /me` chez Spotify, compare l'identifiant du compte à sa liste autorisée, puis appelle Claude.
 4. Le Worker renvoie des **candidats** : titre, artiste, année, raison, et une position dans la progression.
 5. L'app **résout** chaque candidat par une recherche Spotify. Les introuvables et les doublons sont écartés.
-6. L'app marque chaque titre « connu » ou « découverte » (bibliothèque et écoutes de la personne).
-7. L'app garde le nombre de titres demandé, dans l'ordre de la progression, et affiche l'aperçu.
+6. L'app garde le nombre de titres demandé, dans l'ordre de la progression.
+7. L'app marque chaque titre retenu « connu » ou « découverte » (bibliothèque et écoutes de la personne), puis affiche l'aperçu. Marquer après l'assemblage évite d'interroger la bibliothèque pour des candidats écartés.
 
-La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer).
+L'orchestration vit dans `features/forge/forge-run.ts` : elle remonte son avancement (écoutes, forge, vérification sur Spotify titre par titre, marquage) pour l'état « forge en cours », s'interrompt à l'annulation et ne touche jamais au brouillon. Le client du Worker est `infra/forge/worker-client.ts`. Chaque échec est traduit en message (`features/forge/failure.ts`, tableau « Erreurs » de [`GENERATION.md`](GENERATION.md)), avec un bouton pour réessayer.
+
+La **reforge** suit le même flux, avec en plus la liste des titres trempés (à conserver, avec leur position) et la liste des titres déjà refusés (à ne pas reproposer). Elle partage le cœur de la forge (`runReforge`, même fichier) : seuls les titres à chaud sont remplacés et marqués, le titre et la description de la pièce ne changent pas, et un échec laisse la pièce telle quelle sur l'enclume. Pendant la reforge, l'écran reste affiché : les titres à chaud s'estompent, la trempe est figée.
+
+## Envoi sur Spotify
+
+`domain/send.ts` écrit la pièce sur le compte : création d'une playlist **privée** (`POST /me/playlists`) si la pièce n'en a pas encore, puis **remplacement** de ses titres par le premier lot de 100 (`PUT /playlists/{id}/items`) et ajout des lots suivants (`POST`). L'identifiant de la playlist est noté sur la pièce dès sa création : un nouvel essai après une panne la réutilise, et le remplacement repart de zéro, donc ni seconde playlist ni doublon. Une pièce envoyée puis modifiée (reforge, titre) est **rafraîchie** dans la même playlist : titres remplacés (les trempés restent à leur place), puis nom et description mis à jour (`PUT /playlists/{id}`). Si la playlist n'existe plus (`404`), l'enclume le dit et propose « Recréer la playlist » : une nouvelle est créée, jamais en silence.
 
 ## Autorisation du Worker
 
@@ -91,9 +101,11 @@ Le Worker n'a pas de comptes à lui. Il s'appuie sur Spotify :
 - il refuse tout identifiant absent du secret `ALLOWED_SPOTIFY_IDS` ;
 - le résultat de cette vérification est gardé en mémoire quelques minutes pour ne pas doubler chaque appel.
 
-Une limite de requêtes par compte protège la facture Anthropic.
+Une limite de forges par compte protège la facture Anthropic : **20 forges acceptées sur toute heure glissante** (`FORGE_LIMIT`, `apps/worker/src/limit/forge-limiter.ts`), `429` au-delà avec l'en-tête `Retry-After`. Seules les requêtes valides comptent, car ce sont elles qui appellent Claude. Le compteur est un Durable Object par compte (binding `FORGE_LIMITER`), nommé par l'empreinte SHA-256 de l'identifiant Spotify et non par l'identifiant. Il ne garde que les dates des forges de l'heure écoulée, et une alarme efface tout une heure après la dernière forge acceptée. C'est la seule donnée que le Worker conserve d'une requête à l'autre. Le binding Rate Limiting de Cloudflare a été écarté : il ne compte que sur 10 ou 60 secondes, par emplacement et de façon approximative. Si le compteur est injoignable, la forge est refusée (`503`) sans appeler Claude.
 
-Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAUDE_MODEL`.
+CORS : le Worker n'envoie aucun en-tête `Access-Control-*`. L'app mobile n'en a pas besoin, et un navigateur refuse donc tout appel venu d'une page web (la requête préalable `OPTIONS` échoue).
+
+Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAUDE_MODEL`. Procédure de déploiement : [`README.md`](../README.md#déployer-le-worker).
 
 ## Modèle de données local
 
@@ -128,14 +140,25 @@ SQLite sur le téléphone (`expo-sqlite`), fichier `spotiforge.db`. Le schéma e
 
 **`molds`** : moules, c'est-à-dire modèles réutilisables (`id`, `owner_spotify_id`, `name`, `prompt`, `settings` en JSON, `created_at`).
 
+**`taste_cache`** : résumé des écoutes (« Alliage : mes écoutes »), une ligne par compte : `owner_spotify_id`, `taste` (JSON au format `Taste` du contrat : noms d'artistes et de genres seulement), `fetched_at`. Relu sur Spotify au plus une fois par jour.
+
 **`track_cache`** : résolutions déjà faites. `query_key` (artiste et titre normalisés), `spotify_uri` (vide : titre introuvable), métadonnées `title`, `artists` (JSON), `year`, `duration_ms`, et `resolved_at`.
 
-Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
+La pièce sur l'enclume est enregistrée à chacun de ses changements (première forge, trempe, reforge et refusés, édition, création de la playlist, envoi), une écriture à la fois (`features/pieces/persistence.ts`). Au lancement, l'écran Création propose de reprendre la dernière pièce non envoyée ; revenu de l'enclume, il propose d'y retourner (`features/pieces/resume.ts`).
+
+Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent. `track_cache` est la seule table partagée : elle ne contient que des données du catalogue (artiste et titre → titre Spotify), rien de personnel.
+
+**Historique d'un compte déconnecté : conservé et masqué.** Se déconnecter supprime les jetons, le résumé des écoutes du compte (`taste_cache`) et tout ce que la mémoire de l'app gardait (brouillon, pièce sur l'enclume, forge en cours) ; les pièces et les moules restent sur le téléphone, invisibles pour les autres comptes, et réapparaissent si le même compte se reconnecte (`features/session/account-scope.ts`). Raisons : l'app est hors ligne d'abord, une déconnexion ne doit rien faire perdre, et chacun a en principe son propre téléphone. Supprimer l'historique reste possible pièce par pièce depuis « Mes pièces » ; une suppression de tout l'historique d'un compte, sur demande, n'est pas prévue en v1. Quand un autre compte se connecte après une session expirée, la mémoire du précédent est vidée de la même façon ; une session expirée puis reprise par le même compte garde le brouillon.
 
 ## Erreurs à traiter dès la conception
 
-- Hors ligne : l'historique reste lisible, la forge et l'envoi sont désactivés avec un message clair.
-- Jeton expiré ou révoqué : rafraîchissement, sinon retour à la connexion sans perdre le brouillon.
-- Compte hors liste autorisée : message explicite, pas d'erreur technique brute.
-- Trop peu de titres résolus : relancer une forge complémentaire une fois, puis afficher ce qu'on a.
-- Playlist supprimée côté Spotify : proposer de la recréer au prochain rafraîchissement.
+| Cas | Comportement | Où, et quel test le vérifie |
+|---|---|---|
+| Hors ligne | L'app s'ouvre (session reprise sans réseau, polices embarquées, base locale) ; forge, reforge, envoi et connexion désactivés avec un message ; la pièce reste lisible et la trempe possible | `features/network/online.ts` (`expo-network`) ; tests des écrans Création, enclume et connexion |
+| Jeton expiré ou révoqué | Rafraîchissement unique, rejeu ; sinon retour à la connexion (« Ta session Spotify a expiré… »), brouillon gardé pour le même compte | `session-manager`, `infra/spotify/http`, `infra/forge/worker-client`, garde de navigation ; tests de la session, du client HTTP, de `account-scope` et de `AppStack` |
+| Compte hors liste autorisée | Message explicite à la connexion (Spotify), à la forge (Worker) et à l'envoi (Spotify) | `features/auth/copy.ts`, `features/forge/failure.ts`, `features/anvil/send-failure.ts` ; tests de chacun |
+| Trop peu de titres résolus | Forge complémentaire une fois, puis ce qu'on a ; aucun titre : message | `features/forge/forge-run.ts` ; `forge-run.test.ts` |
+| Playlist supprimée côté Spotify | Détectée au renvoi ; « Recréer la playlist » proposé, jamais en silence | `domain/send.ts` ; `send.test.ts`, `send-controller.test.ts` |
+| Erreur imprévue de l'interface | Barrière d'erreur globale : écran « La forge a calé » avec « Réessayer », jamais d'écran blanc ; seul le nom de l'erreur est journalisé | `ErrorBoundary` de `app/_layout.tsx`, `features/app/AppErrorScreen.tsx` ; test de l'écran |
+
+Les messages suivent tous la même règle (`DESIGN.md`) : ce qui se passe, puis quoi faire, en mots simples.
