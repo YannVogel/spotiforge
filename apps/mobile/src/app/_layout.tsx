@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { getAppServices } from '../features/app/services';
 import { startPiecePersistence } from '../features/pieces/persistence';
+import { watchAccountChanges } from '../features/session/account-scope';
 import { getAppConfig } from '../infra/config';
 import { colors, useThemeFonts } from '../ui/theme';
 
@@ -22,6 +23,9 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // Un autre compte ne voit jamais ce que le précédent avait en mémoire.
+  useEffect(() => watchAccountChanges(), []);
 
   // Chaque changement de la pièce sur l'enclume est enregistré sur le téléphone.
   useEffect(() => {

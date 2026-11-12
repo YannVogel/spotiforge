@@ -142,7 +142,9 @@ SQLite sur le téléphone (`expo-sqlite`), fichier `spotiforge.db`. Le schéma e
 
 La pièce sur l'enclume est enregistrée à chacun de ses changements (première forge, trempe, reforge et refusés, édition, création de la playlist, envoi), une écriture à la fois (`features/pieces/persistence.ts`). Au lancement, l'écran Création propose de reprendre la dernière pièce non envoyée ; revenu de l'enclume, il propose d'y retourner (`features/pieces/resume.ts`).
 
-Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
+Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent. `track_cache` est la seule table partagée : elle ne contient que des données du catalogue (artiste et titre → titre Spotify), rien de personnel.
+
+**Historique d'un compte déconnecté : conservé et masqué.** Se déconnecter supprime les jetons, le résumé des écoutes du compte (`taste_cache`) et tout ce que la mémoire de l'app gardait (brouillon, pièce sur l'enclume, forge en cours) ; les pièces et les moules restent sur le téléphone, invisibles pour les autres comptes, et réapparaissent si le même compte se reconnecte (`features/session/account-scope.ts`). Raisons : l'app est hors ligne d'abord, une déconnexion ne doit rien faire perdre, et chacun a en principe son propre téléphone. Supprimer l'historique reste possible pièce par pièce depuis « Mes pièces » ; une suppression de tout l'historique d'un compte, sur demande, n'est pas prévue en v1. Quand un autre compte se connecte après une session expirée, la mémoire du précédent est vidée de la même façon ; une session expirée puis reprise par le même compte garde le brouillon.
 
 ## Erreurs à traiter dès la conception
 
