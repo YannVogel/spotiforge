@@ -26,6 +26,8 @@ export default defineConfig([
     '**/coverage/',
     '**/.expo/',
     '**/.wrangler/',
+    // Worktrees temporaires des agents de code : d'autres copies du repo.
+    '.claude/',
     'apps/mobile/ios/',
     'apps/mobile/android/',
     'apps/worker/worker-configuration.d.ts',

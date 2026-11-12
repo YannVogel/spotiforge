@@ -15,3 +15,6 @@ coverage/
 # Systèmes
 .DS_Store
 *.log
+
+# Worktrees temporaires des agents de code (Claude Code)
+.claude/worktrees/
