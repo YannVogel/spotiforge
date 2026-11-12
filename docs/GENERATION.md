@@ -99,7 +99,8 @@ Ensuite :
 
 - marquer « connu » si le titre est dans la bibliothèque de la personne ou si son artiste figure dans ses écoutes ; sinon « découverte » ;
 - placer les titres trempés à leur position, remplir les places libres avec les candidats résolus triés par `slot` ;
-- couper à la longueur demandée ;
+- couper à la longueur demandée : en titres, au nombre exact ; en minutes, à la coupe la plus proche de la durée visée (on ajoute des titres jusqu'à l'atteindre, puis on retire le dernier s'il en éloigne) ;
+- si les candidats manquent avant un titre trempé, la place reste vide et les titres suivants remontent : un titre trempé n'est jamais retiré, et c'est le seul cas où sa position change ;
 - s'il manque plus d'un titre sur cinq, relancer une forge complémentaire, une seule fois.
 
 La normalisation et l'assemblage sont du code pur du domaine, couverts par des tests unitaires avec des cas réels piégeux (versions live, remasters, titres homonymes).
