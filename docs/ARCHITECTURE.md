@@ -97,38 +97,40 @@ Secrets du Worker : `ANTHROPIC_API_KEY`, `ALLOWED_SPOTIFY_IDS`. Variable : `CLAU
 
 ## Modèle de données local
 
-SQLite, sur le téléphone. Schéma indicatif, à figer dans l'issue dédiée.
+SQLite sur le téléphone (`expo-sqlite`), fichier `spotiforge.db`. Le schéma est créé et mis à jour par des migrations versionnées (`apps/mobile/src/infra/db/migrations.ts`, version dans `PRAGMA user_version`) : une migration publiée ne se modifie plus, on en ajoute une. Clés étrangères actives, dates en texte ISO 8601, booléens en `INTEGER` 0/1. Chaque ligne lue est validée par un schéma Zod avant d'entrer dans le domaine, qui ne connaît que les interfaces `PieceRepository`, `MoldRepository` et `ResolutionCache`.
 
 **`pieces`** : une playlist forgée.
 
 | Champ | Rôle |
 |---|---|
-| `id` | Identifiant local |
+| `id` | Identifiant local (clé primaire) |
 | `owner_spotify_id` | Compte qui l'a forgée |
 | `title`, `description` | Écrits par l'IA, modifiables |
 | `prompt` | Le prompt d'origine |
-| `settings` | Réglages en JSON (longueur, découverte, époques, progression, écoutes) |
+| `settings` | Réglages en JSON (`ForgeSettings` : longueur, découverte, époques, progression, écoutes) |
 | `spotify_playlist_id` | Vide tant que la playlist n'est pas envoyée |
-| `created_at`, `updated_at`, `sent_at` | Dates |
+| `created_at`, `updated_at`, `sent_at` | Dates (`sent_at` vide tant que la playlist n'est pas envoyée) |
 
-**`piece_tracks`** : les titres d'une pièce, dans l'ordre.
+**`piece_tracks`** : les titres d'une pièce, dans l'ordre. Clé `(piece_id, position)`, supprimés avec la pièce.
 
 | Champ | Rôle |
 |---|---|
-| `piece_id`, `position` | Rattachement et ordre |
+| `piece_id`, `position` | Rattachement et ordre (à partir de 0) |
 | `spotify_uri` | Identifiant Spotify du titre |
 | `title`, `artist`, `year` | Copie pour l'affichage hors ligne |
+| `duration_ms` | Durée, pour couper une pièce en minutes |
 | `reason` | « Pourquoi ce titre » |
+| `slot` | Place dans la progression (0 à 1), pour les reforges |
 | `known` | Connu ou découverte |
 | `quenched` | Trempé ou non |
 
-**`rejected_tracks`** : titres refusés pour une pièce (`piece_id`, `spotify_uri`, `artist`, `title`).
+**`rejected_tracks`** : titres refusés pour une pièce (`piece_id`, `position` = ordre du refus, `spotify_uri`, `artist`, `title`), supprimés avec la pièce.
 
-**`molds`** : moules, c'est-à-dire modèles réutilisables (`id`, `owner_spotify_id`, `name`, `prompt`, `settings`, `created_at`).
+**`molds`** : moules, c'est-à-dire modèles réutilisables (`id`, `owner_spotify_id`, `name`, `prompt`, `settings` en JSON, `created_at`).
 
-**`track_cache`** : résolutions déjà faites (`query_key`, `spotify_uri`, métadonnées, `resolved_at`).
+**`track_cache`** : résolutions déjà faites. `query_key` (artiste et titre normalisés), `spotify_uri` (vide : titre introuvable), métadonnées `title`, `artists` (JSON), `year`, `duration_ms`, et `resolved_at`.
 
-Les données sont cloisonnées par `owner_spotify_id` : se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
+Les données sont cloisonnées par `owner_spotify_id` : toutes les opérations des dépôts prennent le compte en paramètre, et se déconnecter puis se connecter avec un autre compte ne montre pas l'historique du précédent.
 
 ## Erreurs à traiter dès la conception
 
